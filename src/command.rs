@@ -1,5 +1,5 @@
-pub(crate) use log;
-pub(crate) use anyhow;
+pub use anyhow;
+pub use log;
 
 #[macro_export]
 macro_rules! command {

@@ -69,9 +69,9 @@ mod tests {
         let mut dispatcher = CommandDispatcher::<()>::new();
         crate::command!(dispatcher,
                 "test",
-                "x": DoubleArgument::new(0.0..=5.0) => x: f64,
-                "y": DoubleArgument::new(0.0..3.0)  => y: f64,
-                context {
+                "x": DoubleArgument::new(0.0..=5.0) => _x: f64,
+                "y": DoubleArgument::new(0.0..3.0)  => _y: f64,
+                _context {
             Ok(())
         });
 
