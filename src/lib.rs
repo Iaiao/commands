@@ -72,7 +72,6 @@ mod tests {
                 "x": DoubleArgument::new(0.0..=5.0) => x: f64,
                 "y": DoubleArgument::new(0.0..3.0)  => y: f64,
                 context {
-            println!("Arguments: x={} y={} context={:?}", x, y, context);
             Ok(())
         });
 
