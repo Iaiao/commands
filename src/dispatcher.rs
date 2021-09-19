@@ -88,12 +88,10 @@ impl<T> CommandDispatcher<T> {
                                     return self.executors.get(execute.unwrap()).unwrap()(
                                         args, context,
                                     );
+                                } else if command.len() == i {
+                                    return false;
                                 } else {
-                                    if command.len() == i {
-                                        return false;
-                                    } else {
-                                        command = &command[i + 1..];
-                                    }
+                                    command = &command[i + 1..];
                                 }
                             } else {
                                 return false;

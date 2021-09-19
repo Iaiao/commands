@@ -71,11 +71,15 @@ mod tests {
                 "test",
                 "x": IntegerArgument::new(0..=5) => _x: i32,
                 "y": DoubleArgument::new(0.0..3.0) => _y: f64,
+                "entities": EntityArgument::default() => _entities: EntitySelector,
                 "string": StringArgument::new(StringProperties::GreedyPhrase) => _s: String,
                 _context {
             Ok(())
         });
 
-        assert!(dispatcher.execute_command("test 3 2.5 abc def", ()));
+        assert!(dispatcher.execute_command(
+            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..10] abc def"#,
+            ()
+        ));
     }
 }

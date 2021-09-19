@@ -120,6 +120,8 @@ where
                 if let Some((size, _)) = parser.parse(command) {
                     if execute.is_some() {
                         Some(Vec::new())
+                    } else if command.len() == size {
+                        None
                     } else {
                         let command = &command[size + 1..];
                         let mut result = None;
