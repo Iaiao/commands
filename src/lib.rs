@@ -73,7 +73,7 @@ mod tests {
                 "y": DoubleArgument::new(0.0..3.0)  => y: f64,
                 context {
             println!("Arguments: x={} y={} context={:?}", x, y, context);
-            true
+            Ok(())
         });
 
         assert!(dispatcher.execute_command("test 3.5 2.5", ()));

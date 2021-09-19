@@ -1,3 +1,6 @@
+pub(crate) use log;
+pub(crate) use anyhow;
+
 #[macro_export]
 macro_rules! command {
     ($dispatcher: ident, $command: literal, $($name: literal: $parser: expr => $arg: ident: $typ: ty),*, $context: ident $executor: block) => {
@@ -12,7 +15,16 @@ macro_rules! command {
                     let $arg: $typ = *args.next().unwrap().downcast::<$typ>().unwrap();
                 )*
                 drop(args);
-                $executor
+                let run = || -> $crate::command::anyhow::Result<()> {
+                    $executor
+                };
+                match run() {
+                    Ok(()) => true,
+                    Err(err) => {
+                        $crate::command::log::warn!("Error in command {}: {}", $command, err);
+                        false
+                    }
+                }
             })
         }
     };
