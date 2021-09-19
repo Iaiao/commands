@@ -84,10 +84,16 @@ impl<T> CommandDispatcher<T> {
                             if let Some(parse_result) = parser.parse(command) {
                                 let (i, arg): (usize, Box<dyn Any>) = parse_result;
                                 args.push(arg);
-                                if let Some(execute) = execute {
-                                    return self.executors.get(*execute).unwrap()(args, context);
+                                if execute.is_some() && command.len() == i {
+                                    return self.executors.get(execute.unwrap()).unwrap()(
+                                        args, context,
+                                    );
                                 } else {
-                                    command = &command[i + 1..];
+                                    if command.len() == i {
+                                        return false;
+                                    } else {
+                                        command = &command[i + 1..];
+                                    }
                                 }
                             } else {
                                 return false;

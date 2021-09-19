@@ -6,7 +6,7 @@ pub mod parser;
 
 #[cfg(test)]
 mod tests {
-    use crate::arguments::DoubleArgument;
+    use crate::arguments::*;
     use crate::dispatcher::CommandDispatcher;
 
     #[test]
@@ -69,12 +69,13 @@ mod tests {
         let mut dispatcher = CommandDispatcher::<()>::new();
         crate::command!(dispatcher,
                 "test",
-                "x": DoubleArgument::new(0.0..=5.0) => _x: f64,
-                "y": DoubleArgument::new(0.0..3.0)  => _y: f64,
+                "x": IntegerArgument::new(0..=5) => _x: i32,
+                "y": DoubleArgument::new(0.0..3.0) => _y: f64,
+                "string": StringArgument::new(StringProperties::GreedyPhrase) => _s: String,
                 _context {
             Ok(())
         });
 
-        assert!(dispatcher.execute_command("test 3.5 2.5", ()));
+        assert!(dispatcher.execute_command("test 3 2.5 abc def", ()));
     }
 }
