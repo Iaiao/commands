@@ -3,16 +3,19 @@ use std::any::Any;
 use anyhow::{anyhow, bail};
 use slab::Slab;
 
-use crate::node::CommandNode;
+use crate::node::{CommandNode, CompletionType};
 use crate::parser::ArgumentParser;
 use crate::varint::write_varint;
+use std::collections::HashMap;
 
 type Args = Vec<Box<dyn Any>>;
+type Completer = Box<dyn Fn(&str) -> Vec<String>>;
 
 pub struct CommandDispatcher<T> {
     // 0 is always root node
     pub(crate) nodes: Slab<Box<CommandNode<Box<dyn ArgumentParser>>>>,
     pub(crate) executors: Slab<Box<dyn Fn(Args, T) -> bool>>,
+    pub(crate) tab_completers: HashMap<String, Completer>,
 }
 
 impl<T> Default for CommandDispatcher<T> {
@@ -30,6 +33,7 @@ impl<T> CommandDispatcher<T> {
         CommandDispatcher {
             nodes,
             executors: Slab::new(),
+            tab_completers: HashMap::default(),
         }
     }
 
@@ -38,6 +42,13 @@ impl<T> CommandDispatcher<T> {
             .get(0)
             .expect("Couldn't find root node")
             .matches(command, self)
+    }
+
+    pub fn tab_complete(&self, prompt: &str) -> Option<Vec<String>> {
+        self.nodes
+            .get(0)
+            .expect("Couldn't find root node")
+            .find_suggestions(prompt, self)
     }
 
     pub fn create_command(&mut self, name: &str) -> anyhow::Result<CreateCommand<T>> {
@@ -108,7 +119,7 @@ impl<T> CommandDispatcher<T> {
             false
         }
     }
-    
+
     pub fn packet(&self) -> std::io::Result<Vec<u8>> {
         let mut bytes = Vec::new();
         write_varint(self.nodes.len() as i32, &mut bytes)?;
@@ -117,6 +128,25 @@ impl<T> CommandDispatcher<T> {
         }
         bytes.push(0);
         Ok(bytes)
+    }
+
+    pub fn get_completions(
+        &self,
+        completion_type: &CompletionType,
+        prompt: &str,
+    ) -> Option<Vec<String>> {
+        match completion_type {
+            CompletionType::Custom(s) => self
+                .tab_completers
+                .get(s)
+                .map(|completer| completer(prompt)),
+            _ => Some(vec![]),
+        }
+    }
+
+    pub fn register_tab_completion(&mut self, completion_type: &str, completer: Completer) {
+        self.tab_completers
+            .insert(completion_type.to_owned(), completer);
     }
 
     fn insert_child(
@@ -143,6 +173,10 @@ impl<T> CommandDispatcher<T> {
 
     pub(crate) fn matches(&self, command: &str, node: usize) -> Option<Vec<usize>> {
         self.nodes.get(node)?.matches(command, self)
+    }
+
+    pub(crate) fn find_node_suggestions(&self, command: &str, node: usize) -> Option<Vec<String>> {
+        self.nodes.get(node)?.find_suggestions(command, self)
     }
 }
 
@@ -176,7 +210,12 @@ impl<'a, T> CreateCommand<'a, T> {
         self
     }
 
-    pub fn with_argument<A>(&mut self, name: &str, parser: A) -> &mut Self
+    pub fn with_argument<A>(
+        &mut self,
+        name: &str,
+        parser: A,
+        completion_type: CompletionType,
+    ) -> &mut Self
     where
         A: ArgumentParser + 'static,
     {
@@ -187,7 +226,7 @@ impl<'a, T> CreateCommand<'a, T> {
                 CommandNode::Argument {
                     execute: None,
                     name: name.to_owned(),
-                    suggestions_type: None, // TODO
+                    suggestions_type: completion_type,
                     parser: Box::new(parser),
                     children: vec![],
                     parent: self.current_node,

@@ -1868,6 +1868,41 @@ mod entity_selector_serde {
     }
 }
 
+#[derive(PartialEq, Debug)]
+pub struct GamemodeArgument;
+
+impl Default for GamemodeArgument {
+    fn default() -> Self {
+        GamemodeArgument
+    }
+}
+
+impl ArgumentParser for GamemodeArgument {
+    fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+        match input.split(' ').next().unwrap() {
+            "survival" => Some(("survival".len(), Box::new(Gamemode::Survival))),
+            "creative" => Some(("creative".len(), Box::new(Gamemode::Creative))),
+            "adventure" => Some(("adventure".len(), Box::new(Gamemode::Adventure))),
+            "spectator" => Some(("spectator".len(), Box::new(Gamemode::Spectator))),
+            _ => None,
+        }
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "brigadier:string"
+    }
+}
+
+impl ParserProperties for () {
+    fn write(&self, _buf: &mut dyn Write) -> std::io::Result<usize> {
+        Ok(0)
+    }
+}
+
 /*
     TODO
     ScoreHolder {
