@@ -1,7 +1,7 @@
 pub mod arguments;
 pub mod command;
 pub mod dispatcher;
-mod node;
+pub mod node;
 pub mod parser;
 
 #[cfg(test)]
