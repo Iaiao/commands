@@ -64,8 +64,8 @@ macro_rules! integer_arguments {
                 &self.0
             }
 
-            fn get_identifier(&self) -> Option<&'static str> {
-                Some($identifier)
+            fn get_identifier(&self) -> &'static str {
+                $identifier
             }
         }
 
@@ -76,7 +76,7 @@ macro_rules! integer_arguments {
         }
 
         impl ParserProperties for $properties {
-            fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
+            fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
                 let mut flags = 0;
                 let mut data = Vec::new();
                 let mut read = 0;
@@ -161,8 +161,8 @@ impl ArgumentParser for StringArgument {
         &self.0
     }
 
-    fn get_identifier(&self) -> Option<&'static str> {
-        Some("brigadier:string")
+    fn get_identifier(&self) -> &'static str {
+        "brigadier:string"
     }
 }
 
@@ -174,7 +174,7 @@ pub enum StringProperties {
 }
 
 impl ParserProperties for StringProperties {
-    fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
+    fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
         buf.write(&[match self {
             StringProperties::SingleWord => 0,
             StringProperties::QuotablePhrase => 1,
@@ -274,8 +274,8 @@ impl ArgumentParser for EntityArgument {
         &self.0
     }
 
-    fn get_identifier(&self) -> Option<&'static str> {
-        Some("minecraft:entity")
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:entity"
     }
 }
 
@@ -286,7 +286,7 @@ pub struct EntityProperties {
 }
 
 impl ParserProperties for EntityProperties {
-    fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
+    fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
         let mut flags = 0;
         if self.single {
             flags |= 1 << 0;

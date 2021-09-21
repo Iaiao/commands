@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::io::Write;
 
 /// Argument parser
 pub trait ArgumentParser {
@@ -8,13 +9,13 @@ pub trait ArgumentParser {
 
     fn get_properties(&self) -> &dyn ParserProperties;
 
-    fn get_identifier(&self) -> Option<&'static str>;
+    fn get_identifier(&self) -> &'static str;
 }
 
 /// Used for Declare Commands packet (https://wiki.vg/Command_Data)
 /// If you're creating your own argument, you don't need to implement ParserProperties
 pub trait ParserProperties {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize>;
+    fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize>;
 }
 
 impl ArgumentParser for () {
@@ -26,7 +27,7 @@ impl ArgumentParser for () {
         unreachable!()
     }
 
-    fn get_identifier(&self) -> Option<&'static str> {
+    fn get_identifier(&self) -> &'static str {
         unreachable!()
     }
 }
@@ -43,7 +44,7 @@ where
         T::get_properties(self)
     }
 
-    fn get_identifier(&self) -> Option<&'static str> {
+    fn get_identifier(&self) -> &'static str {
         T::get_identifier(self)
     }
 }

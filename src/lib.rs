@@ -3,6 +3,7 @@ pub mod command;
 pub mod dispatcher;
 pub mod node;
 pub mod parser;
+mod varint;
 
 #[cfg(test)]
 mod tests {
@@ -66,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_macro() {
-        let mut dispatcher = CommandDispatcher::<()>::new();
+        let dispatcher = &mut CommandDispatcher::<()>::new();
         crate::command!(dispatcher,
                 "test",
                 "x": IntegerArgument::new(0..=5) => _x: i32,

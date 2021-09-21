@@ -5,6 +5,7 @@ use slab::Slab;
 
 use crate::node::CommandNode;
 use crate::parser::ArgumentParser;
+use crate::varint::write_varint;
 
 type Args = Vec<Box<dyn Any>>;
 
@@ -106,6 +107,16 @@ impl<T> CommandDispatcher<T> {
         } else {
             false
         }
+    }
+    
+    pub fn packet(&self) -> std::io::Result<Vec<u8>> {
+        let mut bytes = Vec::new();
+        write_varint(self.nodes.len() as i32, &mut bytes)?;
+        for (_, node) in &self.nodes {
+            node.write_to(&mut bytes)?;
+        }
+        bytes.push(0);
+        Ok(bytes)
     }
 
     fn insert_child(

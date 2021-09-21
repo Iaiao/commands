@@ -1,5 +1,7 @@
 use crate::dispatcher::CommandDispatcher;
 use crate::parser::ArgumentParser;
+use std::io::Write;
+use crate::varint::write_varint;
 
 #[derive(Debug)]
 pub enum CommandNode<T>
@@ -140,6 +142,58 @@ where
                 }
             }
         }
+    }
+    
+    pub fn write_to(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
+        let mut wrote = 0;
+        match self {
+            CommandNode::Root { children } => {
+                let flags = 0;
+                wrote += buf.write(&[flags])?;
+                wrote += write_varint(children.len() as i32, buf)?;
+                for child in children {
+                    wrote += write_varint(*child as i32, buf)?;
+                }
+            }
+            CommandNode::Literal { execute, name, children, .. } => {
+                let mut flags = 1;
+                if execute.is_some() {
+                    flags |= 1 << 2;
+                }
+                wrote += buf.write(&[flags])?;
+                wrote += write_varint(children.len() as i32, buf)?;
+                for child in children {
+                    wrote += write_varint(*child as i32, buf)?;
+                }
+                wrote += write_varint(name.as_bytes().len() as i32, buf)?;
+                wrote += buf.write(name.as_bytes())?;
+            }
+            CommandNode::Argument { execute, name, suggestions_type, parser, children, .. } => {
+                let mut flags = 2;
+                if execute.is_some() {
+                    flags |= 1 << 2;
+                }
+                if suggestions_type.is_some() {
+                    flags |= 1 << 4;
+                }
+                wrote += buf.write(&[flags])?;
+                wrote += write_varint(children.len() as i32, buf)?;
+                for child in children {
+                    wrote += write_varint(*child as i32, buf)?;
+                }
+                wrote += write_varint(name.as_bytes().len() as i32, buf)?;
+                wrote += buf.write(name.as_bytes())?;
+                let identifier = parser.get_identifier();
+                wrote += write_varint(identifier.as_bytes().len() as i32, buf)?;
+                wrote += buf.write(identifier.as_bytes())?;
+                wrote += parser.get_properties().write(buf)?;
+                if let Some(suggestions) = suggestions_type {
+                    wrote += write_varint(suggestions.as_bytes().len() as i32, buf)?;
+                    wrote += buf.write(suggestions.as_bytes())?;
+                }
+            }
+        }
+        Ok(wrote)
     }
 
     pub(crate) fn add_child(&mut self, child: usize) {
