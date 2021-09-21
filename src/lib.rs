@@ -142,27 +142,54 @@ mod tests {
 
         assert_eq!(
             dispatcher.tab_complete(r#"te"#),
-            Some(vec!["test".to_string(), "test2".to_string()])
+            Some(vec![
+                ("test".to_string(), None),
+                ("test2".to_string(), None)
+            ])
         );
 
         dispatcher.register_tab_completion(
             "gamemode",
             Box::new(|_| {
                 vec![
-                    "survival".to_string(),
-                    "creative".to_string(),
-                    "adventure".to_string(),
-                    "spectator".to_string(),
+                    (
+                        "survival".to_string(),
+                        Some("Survival gamemode".to_string()),
+                    ),
+                    (
+                        "creative".to_string(),
+                        Some("Creative gamemode".to_string()),
+                    ),
+                    (
+                        "adventure".to_string(),
+                        Some("Adventure gamemode".to_string()),
+                    ),
+                    (
+                        "spectator".to_string(),
+                        Some("Spectator gamemode".to_string()),
+                    ),
                 ]
             }),
         );
         assert_eq!(
             dispatcher.tab_complete(r#"test2 "#),
             Some(vec![
-                "survival".to_string(),
-                "creative".to_string(),
-                "adventure".to_string(),
-                "spectator".to_string()
+                (
+                    "survival".to_string(),
+                    Some("Survival gamemode".to_string()),
+                ),
+                (
+                    "creative".to_string(),
+                    Some("Creative gamemode".to_string()),
+                ),
+                (
+                    "adventure".to_string(),
+                    Some("Adventure gamemode".to_string()),
+                ),
+                (
+                    "spectator".to_string(),
+                    Some("Spectator gamemode".to_string()),
+                ),
             ])
         );
     }

@@ -149,11 +149,11 @@ where
         &self,
         mut prompt: &str,
         dispatcher: &CommandDispatcher<U>,
-    ) -> Option<Vec<String>> {
+    ) -> Option<Vec<(String, Option<String>)>> {
         if !prompt.contains(' ') {
             match self {
                 CommandNode::Root { children } => {
-                    let mut result: Option<Vec<String>> = None;
+                    let mut result: Option<Vec<(String, Option<String>)>> = None;
                     for child in children {
                         if let Some(suggestions) = dispatcher.find_node_suggestions(prompt, *child)
                         {
@@ -166,7 +166,7 @@ where
                     }
                     result
                 }
-                CommandNode::Literal { name, .. } => Some(vec![name.to_owned()]),
+                CommandNode::Literal { name, .. } => Some(vec![(name.to_owned(), None)]),
                 CommandNode::Argument {
                     suggestions_type, ..
                 } => dispatcher.get_completions(suggestions_type, prompt),
@@ -174,7 +174,7 @@ where
         } else {
             match self {
                 CommandNode::Root { children } => {
-                    let mut result: Option<Vec<String>> = None;
+                    let mut result: Option<Vec<(String, Option<String>)>> = None;
                     for child in children {
                         if let Some(suggestions) = dispatcher.find_node_suggestions(prompt, *child)
                         {
@@ -188,7 +188,7 @@ where
                     result
                 }
                 CommandNode::Literal { children, name, .. } => {
-                    let mut result: Option<Vec<String>> = None;
+                    let mut result: Option<Vec<(String, Option<String>)>> = None;
                     if prompt.starts_with(&format!("{} ", name)) {
                         prompt = &prompt[name.len() + 1..];
                         for child in children {
@@ -208,7 +208,7 @@ where
                 CommandNode::Argument {
                     parser, children, ..
                 } => {
-                    let mut result: Option<Vec<String>> = None;
+                    let mut result: Option<Vec<(String, Option<String>)>> = None;
                     if let Some((size, _)) = parser.parse(prompt) {
                         prompt = &prompt[size + 1..];
                         for child in children {

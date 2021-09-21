@@ -9,7 +9,7 @@ use crate::varint::write_varint;
 use std::collections::HashMap;
 
 type Args = Vec<Box<dyn Any>>;
-type Completer = Box<dyn Fn(&str) -> Vec<String>>;
+type Completer = Box<dyn Fn(&str) -> Vec<(String, Option<String>)>>;
 
 pub struct CommandDispatcher<T> {
     // 0 is always root node
@@ -44,7 +44,7 @@ impl<T> CommandDispatcher<T> {
             .matches(command, self)
     }
 
-    pub fn tab_complete(&self, prompt: &str) -> Option<Vec<String>> {
+    pub fn tab_complete(&self, prompt: &str) -> Option<Vec<(String, Option<String>)>> {
         self.nodes
             .get(0)
             .expect("Couldn't find root node")
@@ -134,7 +134,7 @@ impl<T> CommandDispatcher<T> {
         &self,
         completion_type: &CompletionType,
         prompt: &str,
-    ) -> Option<Vec<String>> {
+    ) -> Option<Vec<(String, Option<String>)>> {
         match completion_type {
             CompletionType::Custom(s) => self
                 .tab_completers
@@ -175,7 +175,7 @@ impl<T> CommandDispatcher<T> {
         self.nodes.get(node)?.matches(command, self)
     }
 
-    pub(crate) fn find_node_suggestions(&self, command: &str, node: usize) -> Option<Vec<String>> {
+    pub(crate) fn find_node_suggestions(&self, command: &str, node: usize) -> Option<Vec<(String, Option<String>)>> {
         self.nodes.get(node)?.find_suggestions(command, self)
     }
 }
