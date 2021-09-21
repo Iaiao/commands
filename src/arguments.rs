@@ -298,9 +298,8 @@ impl ParserProperties for EntityProperties {
     }
 }
 
-/// Argument kind which supports entity selectors.
 pub struct EntitySelector {
-    /// Entities selected by the parameter.
+    /// Entity filters (except for [`EntitySelectorPredicate::Sort`], it's not a filter)
     pub requirements: Vec<EntitySelectorPredicate>,
 }
 
@@ -363,7 +362,7 @@ pub enum EntitySelectorPredicate {
     Scores(HashMap<String, WrappedRange<i32>>),
     /// Specify selection priority
     Sort(EntitySelectorSorting),
-    /// Filter target selection based on the entity's scoreboard tags
+    /// Filter target selection based on the entity's scoreboard tags (not implemented yet)
     Tag(BoolPredicate<String>),
     /// Filter target selection based on teams.
     /// Arguments testing for equality cannot be duplicated,
