@@ -175,7 +175,11 @@ impl<T> CommandDispatcher<T> {
         self.nodes.get(node)?.matches(command, self)
     }
 
-    pub(crate) fn find_node_suggestions(&self, command: &str, node: usize) -> Option<Vec<(String, Option<String>)>> {
+    pub(crate) fn find_node_suggestions(
+        &self,
+        command: &str,
+        node: usize,
+    ) -> Option<Vec<(String, Option<String>)>> {
         self.nodes.get(node)?.find_suggestions(command, self)
     }
 }

@@ -10,6 +10,9 @@ mod tests {
     use crate::arguments::*;
     use crate::dispatcher::CommandDispatcher;
     use crate::node::CompletionType;
+    use crate::parser::{ArgumentParser, ParserProperties};
+    use std::any::Any;
+    use std::io::Write;
 
     #[test]
     fn simple_command() {
@@ -127,6 +130,34 @@ mod tests {
 
     #[test]
     fn test_completions() {
+        pub struct GamemodeArgument;
+
+        impl ArgumentParser for GamemodeArgument {
+            fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+                match input.split(' ').next().unwrap() {
+                    "survival" => Some(("survival".len(), Box::new(Gamemode::Survival))),
+                    "creative" => Some(("creative".len(), Box::new(Gamemode::Creative))),
+                    "adventure" => Some(("adventure".len(), Box::new(Gamemode::Adventure))),
+                    "spectator" => Some(("spectator".len(), Box::new(Gamemode::Spectator))),
+                    _ => None,
+                }
+            }
+
+            fn get_properties(&self) -> &dyn ParserProperties {
+                &()
+            }
+
+            fn get_identifier(&self) -> &'static str {
+                "brigadier:string"
+            }
+        }
+
+        impl ParserProperties for () {
+            fn write(&self, _buf: &mut dyn Write) -> std::io::Result<usize> {
+                Ok(0)
+            }
+        }
+
         let dispatcher = &mut CommandDispatcher::<()>::new();
         crate::command!(dispatcher,
             "test",
