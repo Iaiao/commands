@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::parser::{ArgumentParser, ParserProperties};
 
-macro_rules! integer_arguments {
+macro_rules! impl_integer_argument {
     ($argument: ident, $properties: ident, $typ: ty: $chars: pat, $identifier: literal) => {
         #[derive(PartialEq, Debug)]
         pub struct $argument(pub $properties);
@@ -101,10 +101,11 @@ macro_rules! integer_arguments {
         }
     };
 }
-integer_arguments!(DoubleArgument, DoubleProperties, f64: '0'..='9' | '.', "brigadier:double");
-integer_arguments!(FloatArgument, FloatProperties, f32: '0'..='9' | '.', "brigadier:float");
-integer_arguments!(IntegerArgument, IntegerProperties, i32: '0'..='9', "brigadier:integer");
-integer_arguments!(LongArgument, LongProperties, i64: '0'..='9', "brigadier:long");
+
+impl_integer_argument!(DoubleArgument, DoubleProperties, f64: '0'..='9' | '.', "brigadier:double");
+impl_integer_argument!(FloatArgument, FloatProperties, f32: '0'..='9' | '.', "brigadier:float");
+impl_integer_argument!(IntegerArgument, IntegerProperties, i32: '0'..='9', "brigadier:integer");
+impl_integer_argument!(LongArgument, LongProperties, i64: '0'..='9', "brigadier:long");
 
 #[derive(PartialEq, Debug)]
 pub struct StringArgument(pub StringProperties);
