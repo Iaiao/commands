@@ -155,7 +155,7 @@ impl<T> CommandDispatcher<T> {
     }
 
     #[allow(clippy::type_complexity)]
-    pub fn to_parts(
+    pub fn into_parts(
         self,
     ) -> (
         Slab<Box<CommandNode<Box<dyn ArgumentParser>>>>,
