@@ -12,8 +12,23 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::parser::{ArgumentParser, ParserProperties};
 
+// Unstable, should be removed when we increment our MSRV
+fn cloned_bound<T: Clone>(bound: Bound<&T>) -> Bound<T> {
+    match bound {
+        Bound::Unbounded => Bound::Unbounded,
+        Bound::Included(x) => Bound::Included(x.clone()),
+        Bound::Excluded(x) => Bound::Excluded(x.clone()),
+    }
+}
+
+fn split_two_dots_once(s: &str) -> Option<(&str, &str)> {
+    let start = s.find("..")?;
+    let end = start + "..".len();
+    Some((&s[..start], &s[end..]))
+}
+
 macro_rules! impl_integer_argument {
-    ($argument: ident, $properties: ident, $typ: ty: $chars: pat, $identifier: literal) => {
+    ($argument: ident, $properties: ident, $typ: ty, $is_float: literal, $identifier: literal) => {
         #[derive(PartialEq, Debug)]
         pub struct $argument(pub $properties);
 
@@ -29,8 +44,8 @@ macro_rules! impl_integer_argument {
                 R: RangeBounds<$typ>,
             {
                 $argument($properties {
-                    min: range.start_bound().cloned(),
-                    max: range.end_bound().cloned(),
+                    min: cloned_bound(range.start_bound()),
+                    max: cloned_bound(range.end_bound()),
                 })
             }
         }
@@ -40,7 +55,8 @@ macro_rules! impl_integer_argument {
                 let mut i = 0;
                 for char in input.chars() {
                     match char {
-                        $chars => i += 1,
+                        '0'..='9' => i += 1,
+                        '.' if $is_float => i += 1,
                         _ => break,
                     }
                 }
@@ -84,14 +100,14 @@ macro_rules! impl_integer_argument {
                     Bound::Unbounded => (),
                     Bound::Included(x) | Bound::Excluded(x) => {
                         flags |= 1 << 0;
-                        data.extend(x.to_be_bytes());
+                        data.extend(&x.to_be_bytes());
                     }
                 }
                 match self.max {
                     Bound::Unbounded => (),
                     Bound::Included(x) | Bound::Excluded(x) => {
                         flags |= 1 << 0;
-                        data.extend(x.to_be_bytes());
+                        data.extend(&x.to_be_bytes());
                     }
                 }
                 read += buf.write(&[flags])?;
@@ -102,10 +118,22 @@ macro_rules! impl_integer_argument {
     };
 }
 
-impl_integer_argument!(DoubleArgument, DoubleProperties, f64: '0'..='9' | '.', "brigadier:double");
-impl_integer_argument!(FloatArgument, FloatProperties, f32: '0'..='9' | '.', "brigadier:float");
-impl_integer_argument!(IntegerArgument, IntegerProperties, i32: '0'..='9', "brigadier:integer");
-impl_integer_argument!(LongArgument, LongProperties, i64: '0'..='9', "brigadier:long");
+impl_integer_argument!(
+    DoubleArgument,
+    DoubleProperties,
+    f64,
+    true,
+    "brigadier:double"
+);
+impl_integer_argument!(FloatArgument, FloatProperties, f32, true, "brigadier:float");
+impl_integer_argument!(
+    IntegerArgument,
+    IntegerProperties,
+    i32,
+    false,
+    "brigadier:integer"
+);
+impl_integer_argument!(LongArgument, LongProperties, i64, false, "brigadier:long");
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct StringArgument(pub StringProperties);
@@ -554,7 +582,7 @@ where
     T: FromStr + Debug + PartialOrd,
 {
     pub fn parse(s: String) -> anyhow::Result<WrappedRange<T>> {
-        let (start, end) = s.split_once("..").unwrap_or((&s, &s));
+        let (start, end) = split_two_dots_once(&s).unwrap_or((&s, &s));
         let (start, end) = (
             if start.is_empty() {
                 None
@@ -1731,6 +1759,7 @@ mod entity_selector_serde {
         };
 
         use super::*;
+        use std::iter::FromIterator;
 
         #[test]
         fn test_serialize_struct() {
@@ -1780,11 +1809,11 @@ mod entity_selector_serde {
                 )),
                 EntitySelectorPredicate::Level((0..=6).into()),
                 EntitySelectorPredicate::Type(EntityType::Player),
-                EntitySelectorPredicate::Advancements(HashMap::from([
+                EntitySelectorPredicate::Advancements(HashMap::from_iter(vec![
                     ("test/1".to_string(), AdvancementPredicate::Value(true)),
                     (
                         "test/2".to_string(),
-                        AdvancementPredicate::Criteria(HashMap::from([(
+                        AdvancementPredicate::Criteria(HashMap::from_iter(vec![(
                             "criteria".to_string(),
                             true,
                         )])),
@@ -1848,11 +1877,11 @@ mod entity_selector_serde {
                     "my_predicate".to_string(),
                 )),
                 EntitySelectorPredicate::Level((0..=6).into()),
-                EntitySelectorPredicate::Advancements(HashMap::from([
+                EntitySelectorPredicate::Advancements(HashMap::from_iter(vec![
                     ("test/1".to_string(), AdvancementPredicate::Value(true)),
                     (
                         "test/2".to_string(),
-                        AdvancementPredicate::Criteria(HashMap::from([(
+                        AdvancementPredicate::Criteria(HashMap::from_iter(vec![(
                             "criteria".to_string(),
                             true,
                         )])),
