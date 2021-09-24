@@ -3,6 +3,7 @@
 /.vscode
 /.cargo
 /Cargo.lock
+/*.iml
 
 # macOS desktop files
 **/.DS_STORE
