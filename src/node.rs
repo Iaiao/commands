@@ -4,7 +4,8 @@ use crate::dispatcher::CommandDispatcher;
 use crate::parser::ArgumentParser;
 use crate::varint::write_varint;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+#[repr(C)]
 pub enum CommandNode<T>
 where
     T: ArgumentParser,
@@ -148,6 +149,7 @@ where
     pub fn find_suggestions<U>(
         &self,
         mut prompt: &str,
+        context: &mut U,
         dispatcher: &CommandDispatcher<U>,
     ) -> Option<Vec<(String, Option<String>)>> {
         if !prompt.contains(' ') {
@@ -155,7 +157,8 @@ where
                 CommandNode::Root { children } => {
                     let mut result: Option<Vec<(String, Option<String>)>> = None;
                     for child in children {
-                        if let Some(suggestions) = dispatcher.find_node_suggestions(prompt, *child)
+                        if let Some(suggestions) =
+                            dispatcher.find_node_suggestions(prompt, context, *child)
                         {
                             if let Some(result) = result.as_mut() {
                                 result.extend(suggestions);
@@ -169,14 +172,15 @@ where
                 CommandNode::Literal { name, .. } => Some(vec![(name.to_owned(), None)]),
                 CommandNode::Argument {
                     suggestions_type, ..
-                } => dispatcher.get_completions(suggestions_type, prompt),
+                } => dispatcher.get_completions(suggestions_type, context, prompt),
             }
         } else {
             match self {
                 CommandNode::Root { children } => {
                     let mut result: Option<Vec<(String, Option<String>)>> = None;
                     for child in children {
-                        if let Some(suggestions) = dispatcher.find_node_suggestions(prompt, *child)
+                        if let Some(suggestions) =
+                            dispatcher.find_node_suggestions(prompt, context, *child)
                         {
                             if let Some(result) = result.as_mut() {
                                 result.extend(suggestions);
@@ -193,7 +197,7 @@ where
                         prompt = &prompt[name.len() + 1..];
                         for child in children {
                             if let Some(suggestions) =
-                                dispatcher.find_node_suggestions(prompt, *child)
+                                dispatcher.find_node_suggestions(prompt, context, *child)
                             {
                                 if let Some(result) = result.as_mut() {
                                     result.extend(suggestions);
@@ -213,7 +217,7 @@ where
                         prompt = &prompt[size + 1..];
                         for child in children {
                             if let Some(suggestions) =
-                                dispatcher.find_node_suggestions(prompt, *child)
+                                dispatcher.find_node_suggestions(prompt, context, *child)
                             {
                                 if let Some(result) = result.as_mut() {
                                     result.extend(suggestions);
@@ -306,7 +310,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CompletionType {
     Custom(String),
     AllRecipes,

@@ -9,7 +9,7 @@ macro_rules! command {
             $(
                 command.with_argument($name, $parser, $crate::node::CompletionType::Custom($completion.to_owned()));
             )*
-            command.executes(|args, $context| {
+            command.executes(move |args, $context| {
                 let mut args = args.into_iter();
                 $(
                     let $arg: $typ = *args.next().unwrap().downcast::<$typ>().unwrap();

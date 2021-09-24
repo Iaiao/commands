@@ -107,7 +107,7 @@ impl_integer_argument!(FloatArgument, FloatProperties, f32: '0'..='9' | '.', "br
 impl_integer_argument!(IntegerArgument, IntegerProperties, i32: '0'..='9', "brigadier:integer");
 impl_integer_argument!(LongArgument, LongProperties, i64: '0'..='9', "brigadier:long");
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct StringArgument(pub StringProperties);
 
 impl Default for StringArgument {
@@ -167,7 +167,7 @@ impl ArgumentParser for StringArgument {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum StringProperties {
     SingleWord,
     QuotablePhrase,
@@ -184,7 +184,7 @@ impl ParserProperties for StringProperties {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct EntityArgument(pub EntityProperties);
 
 impl Default for EntityArgument {
@@ -280,7 +280,7 @@ impl ArgumentParser for EntityArgument {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct EntityProperties {
     single: bool,
     only_players: bool,

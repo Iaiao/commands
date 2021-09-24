@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::collections::HashMap;
 
 use anyhow::{anyhow, bail};
 use slab::Slab;
@@ -6,16 +7,15 @@ use slab::Slab;
 use crate::node::{CommandNode, CompletionType};
 use crate::parser::ArgumentParser;
 use crate::varint::write_varint;
-use std::collections::HashMap;
 
-type Args = Vec<Box<dyn Any>>;
-type Completer = Box<dyn Fn(&str) -> Vec<(String, Option<String>)>>;
+pub type Args = Vec<Box<dyn Any>>;
+pub type Completer<T> = Box<dyn Fn(&str, &mut T) -> Vec<(String, Option<String>)>>;
 
 pub struct CommandDispatcher<T> {
     // 0 is always root node
     pub(crate) nodes: Slab<Box<CommandNode<Box<dyn ArgumentParser>>>>,
     pub(crate) executors: Slab<Box<dyn Fn(Args, T) -> bool>>,
-    pub(crate) tab_completers: HashMap<String, Completer>,
+    pub(crate) tab_completers: HashMap<String, Completer<T>>,
 }
 
 impl<T> Default for CommandDispatcher<T> {
@@ -44,11 +44,15 @@ impl<T> CommandDispatcher<T> {
             .matches(command, self)
     }
 
-    pub fn tab_complete(&self, prompt: &str) -> Option<Vec<(String, Option<String>)>> {
+    pub fn tab_complete(
+        &self,
+        prompt: &str,
+        mut context: T,
+    ) -> Option<Vec<(String, Option<String>)>> {
         self.nodes
             .get(0)
             .expect("Couldn't find root node")
-            .find_suggestions(prompt, self)
+            .find_suggestions(prompt, &mut context, self)
     }
 
     pub fn create_command(&mut self, name: &str) -> anyhow::Result<CreateCommand<T>> {
@@ -133,20 +137,87 @@ impl<T> CommandDispatcher<T> {
     pub fn get_completions(
         &self,
         completion_type: &CompletionType,
+        context: &mut T,
         prompt: &str,
     ) -> Option<Vec<(String, Option<String>)>> {
         match completion_type {
             CompletionType::Custom(s) => self
                 .tab_completers
                 .get(s)
-                .map(|completer| completer(prompt)),
+                .map(|completer| completer(prompt, context)),
             _ => Some(vec![]),
         }
     }
 
-    pub fn register_tab_completion(&mut self, completion_type: &str, completer: Completer) {
+    pub fn register_tab_completion(&mut self, completion_type: &str, completer: Completer<T>) {
         self.tab_completers
             .insert(completion_type.to_owned(), completer);
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn to_parts(
+        self,
+    ) -> (
+        Slab<Box<CommandNode<Box<dyn ArgumentParser>>>>,
+        Slab<Box<dyn Fn(Args, T) -> bool>>,
+        HashMap<String, Completer<T>>,
+    ) {
+        (self.nodes, self.executors, self.tab_completers)
+    }
+
+    pub fn add_nodes(&mut self, nodes: Vec<Box<CommandNode<Box<dyn ArgumentParser>>>>) {
+        let nodes_len = self.nodes.len();
+        let executors_len = self.executors.len();
+        for node in nodes {
+            match *node {
+                CommandNode::Root { .. } => (),
+                CommandNode::Literal {
+                    execute,
+                    name,
+                    children,
+                    parent,
+                } => {
+                    let i = self.nodes.insert(Box::new(CommandNode::Literal {
+                        execute: execute.map(|e| e + executors_len),
+                        name,
+                        children: children.iter().map(|c| c + nodes_len - 1).collect(),
+                        parent: if parent == 0 {
+                            0
+                        } else {
+                            parent + nodes_len - 1
+                        },
+                    }));
+                    if parent == 0 {
+                        self.nodes.get_mut(0).unwrap().add_child(i);
+                    }
+                }
+                CommandNode::Argument {
+                    execute,
+                    name,
+                    suggestions_type,
+                    parser,
+                    children,
+                    parent,
+                } => {
+                    self.nodes.insert(Box::new(CommandNode::Argument {
+                        execute: execute.map(|e| e + executors_len),
+                        name,
+                        suggestions_type,
+                        parser,
+                        children: children.iter().map(|c| c + nodes_len - 1).collect(),
+                        parent: if parent == 0 {
+                            0
+                        } else {
+                            parent + nodes_len - 1
+                        },
+                    }));
+                }
+            }
+        }
+    }
+
+    pub fn add_executor(&mut self, executor: Box<dyn Fn(Args, T) -> bool>) -> usize {
+        self.executors.insert(executor)
     }
 
     fn insert_child(
@@ -178,9 +249,12 @@ impl<T> CommandDispatcher<T> {
     pub(crate) fn find_node_suggestions(
         &self,
         command: &str,
+        context: &mut T,
         node: usize,
     ) -> Option<Vec<(String, Option<String>)>> {
-        self.nodes.get(node)?.find_suggestions(command, self)
+        self.nodes
+            .get(node)?
+            .find_suggestions(command, context, self)
     }
 }
 
