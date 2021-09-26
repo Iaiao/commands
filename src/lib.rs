@@ -84,7 +84,7 @@ mod tests {
                 "test",
                 "x": IntegerArgument::new(0..=5), "none" => _x: i32,
                 "y": DoubleArgument::new(0.0..3.0), "none" => _y: f64,
-                "entities": EntityArgument::default(), "entity" => _entities: EntitySelector,
+                "entities": EntityArgument::ENTITIES, "entity" => _entities: EntitySelector,
                 "string": StringArgument::new(StringProperties::GreedyPhrase), "none" => _s: String,
                 _context {
             Ok(())

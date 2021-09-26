@@ -223,6 +223,25 @@ impl ParserProperties for StringProperties {
 #[derive(PartialEq, Debug, Clone)]
 pub struct EntityArgument(pub EntityProperties);
 
+impl EntityArgument {
+    pub const ENTITY: EntityArgument = EntityArgument(EntityProperties {
+        single: true,
+        only_players: false,
+    });
+    pub const PLAYER: EntityArgument = EntityArgument(EntityProperties {
+        single: true,
+        only_players: true,
+    });
+    pub const ENTITIES: EntityArgument = EntityArgument(EntityProperties {
+        single: false,
+        only_players: false,
+    });
+    pub const PLAYERS: EntityArgument = EntityArgument(EntityProperties {
+        single: false,
+        only_players: true,
+    });
+}
+
 impl Default for EntityArgument {
     fn default() -> Self {
         EntityArgument::new(EntityProperties {
