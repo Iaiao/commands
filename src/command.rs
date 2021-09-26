@@ -15,7 +15,7 @@ macro_rules! command {
                     let $arg: $typ = *args.next().unwrap().downcast::<$typ>().unwrap();
                 )*
                 drop(args);
-                let run = || -> $crate::command::anyhow::Result<()> {
+                let mut run = || -> $crate::command::anyhow::Result<()> {
                     $executor
                 };
                 match run() {
@@ -33,7 +33,7 @@ macro_rules! command {
             let mut command = $crate::dispatcher::CommandDispatcher::create_command($dispatcher, $command).unwrap();
             command.executes(|args, mut $context| {
                 drop(args);
-                let run = || -> $crate::command::anyhow::Result<()> {
+                let mut run = || -> $crate::command::anyhow::Result<()> {
                     $executor
                 };
                 match run() {
