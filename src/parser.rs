@@ -31,20 +31,3 @@ impl ArgumentParser for () {
         unreachable!()
     }
 }
-
-impl<T> ArgumentParser for Box<T>
-where
-    T: ArgumentParser + ?Sized,
-{
-    fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
-        T::parse(self, input)
-    }
-
-    fn get_properties(&self) -> &dyn ParserProperties {
-        T::get_properties(self)
-    }
-
-    fn get_identifier(&self) -> &'static str {
-        T::get_identifier(self)
-    }
-}

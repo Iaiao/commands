@@ -1904,13 +1904,3 @@ mod entity_selector_serde {
     }
 }
 
-/*
-    TODO
-    ScoreHolder {
-        allow_multiple: bool
-    },
-    Range {
-        decimals: bool
-    }
-}
-*/
