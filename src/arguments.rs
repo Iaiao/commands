@@ -11,7 +11,6 @@ use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
-use crate::arguments::EntitySelectorPredicate::Limit;
 use crate::parser::{ArgumentParser, ParserProperties};
 
 // Unstable, should be removed when we increment our MSRV
@@ -298,7 +297,7 @@ impl ArgumentParser for EntityArgument {
                 return if self.0.only_players && matches!(selector, EntitySelector::Uuid(_)) {
                     None
                 } else {
-                    Some((something.len(), Box::new(selector)));
+                    Some((something.len(), Box::new(selector)))
                 };
             }
         };
@@ -870,6 +869,125 @@ pub enum EntityType {
     ZombieHorse,
     ZombieVillager,
     ZombifiedPiglin,
+}
+
+impl EntityType {
+    pub fn name(&self) -> &'static str {
+        match self {
+            EntityType::AreaEffectCloud => "area_effect_cloud",
+            EntityType::ArmorStand => "armor_stand",
+            EntityType::Arrow => "arrow",
+            EntityType::Axolotl => "axolotl",
+            EntityType::Bat => "bat",
+            EntityType::Bee => "bee",
+            EntityType::Blaze => "blaze",
+            EntityType::Boat => "boat",
+            EntityType::Cat => "cat",
+            EntityType::CaveSpider => "cave_spider",
+            EntityType::Chicken => "chicken",
+            EntityType::Cod => "cod",
+            EntityType::Cow => "cow",
+            EntityType::Creeper => "creeper",
+            EntityType::Dolphin => "dolphin",
+            EntityType::Donkey => "donkey",
+            EntityType::DragonFireball => "dragon_fireball",
+            EntityType::Drowned => "drowned",
+            EntityType::ElderGuardian => "elder_guardian",
+            EntityType::EndCrystal => "end_crystal",
+            EntityType::EnderDragon => "ender_dragon",
+            EntityType::Enderman => "enderman",
+            EntityType::Endermite => "endermite",
+            EntityType::Evoker => "evoker",
+            EntityType::EvokerFangs => "evoker_fangs",
+            EntityType::ExperienceOrb => "experience_orb",
+            EntityType::EyeOfEnder => "eye_of_ender",
+            EntityType::FallingBlock => "falling_block",
+            EntityType::FireworkRocket => "firework_rocket",
+            EntityType::Fox => "fox",
+            EntityType::Ghast => "ghast",
+            EntityType::Giant => "giant",
+            EntityType::GlowItemFrame => "glow_item_frame",
+            EntityType::GlowSquid => "glow_squid",
+            EntityType::Goat => "goat",
+            EntityType::Guardian => "guardian",
+            EntityType::Hoglin => "hoglin",
+            EntityType::Horse => "horse",
+            EntityType::Husk => "husk",
+            EntityType::Illusioner => "illusioner",
+            EntityType::IronGolem => "iron_golem",
+            EntityType::Item => "item",
+            EntityType::ItemFrame => "item_frame",
+            EntityType::Fireball => "fireball",
+            EntityType::LeashKnot => "leash_knot",
+            EntityType::LightningBolt => "lightning_bolt",
+            EntityType::Llama => "llama",
+            EntityType::LlamaSpit => "llama_spit",
+            EntityType::MagmaCube => "magma_cube",
+            EntityType::Minecart => "minecart",
+            EntityType::ChestMinecart => "chest_minecart",
+            EntityType::CommandBlockMinecart => "command_block_minecart",
+            EntityType::FurnaceMinecart => "furnace_minecart",
+            EntityType::HopperMinecart => "hopper_minecart",
+            EntityType::SpawnerMinecart => "spawner_minecart",
+            EntityType::TntMinecart => "tnt_minecart",
+            EntityType::Marker => "marker",
+            EntityType::Mule => "mule",
+            EntityType::Mooshroom => "mooshroom",
+            EntityType::Ocelot => "ocelot",
+            EntityType::Painting => "painting",
+            EntityType::Panda => "panda",
+            EntityType::Parrot => "parrot",
+            EntityType::Phantom => "phantom",
+            EntityType::Pig => "pig",
+            EntityType::Piglin => "piglin",
+            EntityType::PiglinBrute => "piglin_brute",
+            EntityType::Pillager => "pillager",
+            EntityType::PolarBear => "polar_bear",
+            EntityType::Tnt => "tnt",
+            EntityType::Pufferfish => "pufferfish",
+            EntityType::Rabbit => "rabbit",
+            EntityType::Ravager => "ravager",
+            EntityType::Salmon => "salmon",
+            EntityType::Sheep => "sheep",
+            EntityType::Shulker => "shulker",
+            EntityType::ShulkerBullet => "shulker_bullet",
+            EntityType::Silverfish => "silverfish",
+            EntityType::Skeleton => "skeleton",
+            EntityType::SkeletonHorse => "skeleton_horse",
+            EntityType::Slime => "slime",
+            EntityType::SmallFireball => "small_fireball",
+            EntityType::SnowGolem => "snow_golem",
+            EntityType::Snowball => "snowball",
+            EntityType::SpectralArrow => "spectral_arrow",
+            EntityType::Spider => "spider",
+            EntityType::Squid => "squid",
+            EntityType::Stray => "stray",
+            EntityType::Strider => "strider",
+            EntityType::Egg => "egg",
+            EntityType::EnderPearl => "ender_pearl",
+            EntityType::ExperienceBottle => "experience_bottle",
+            EntityType::Potion => "potion",
+            EntityType::Trident => "trident",
+            EntityType::TraderLlama => "trader_llama",
+            EntityType::TropicalFish => "tropical_fish",
+            EntityType::Turtle => "turtle",
+            EntityType::Vex => "vex",
+            EntityType::Villager => "villager",
+            EntityType::Vindicator => "vindicator",
+            EntityType::WanderingTrader => "wandering_trader",
+            EntityType::Witch => "witch",
+            EntityType::Wither => "wither",
+            EntityType::WitherSkeleton => "wither_skeleton",
+            EntityType::WitherSkull => "wither_skull",
+            EntityType::Wolf => "wolf",
+            EntityType::Zoglin => "zoglin",
+            EntityType::Zombie => "zombie",
+            EntityType::ZombieHorse => "zombie_horse",
+            EntityType::ZombieVillager => "zombie_villager",
+            EntityType::ZombifiedPiglin => "zombified_piglin",
+            EntityType::Player => "player",
+        }
+    }
 }
 
 mod entity_selector_serde {
