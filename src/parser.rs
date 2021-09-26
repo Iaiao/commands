@@ -17,17 +17,3 @@ pub trait ArgumentParser {
 pub trait ParserProperties {
     fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize>;
 }
-
-impl ArgumentParser for () {
-    fn parse(&self, _input: &str) -> Option<(usize, Box<dyn Any>)> {
-        unreachable!()
-    }
-
-    fn get_properties(&self) -> &dyn ParserProperties {
-        unreachable!()
-    }
-
-    fn get_identifier(&self) -> &'static str {
-        unreachable!()
-    }
-}
