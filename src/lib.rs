@@ -7,11 +7,12 @@ mod varint;
 
 #[cfg(test)]
 mod tests {
+    use std::any::Any;
+
     use crate::arguments::*;
     use crate::dispatcher::CommandDispatcher;
     use crate::node::CompletionType;
     use crate::parser::{ArgumentParser, ParserProperties};
-    use std::any::Any;
 
     #[test]
     fn simple_command() {
@@ -143,7 +144,7 @@ mod tests {
             }
 
             fn get_properties(&self) -> &dyn ParserProperties {
-                &()
+                &StringProperties::SingleWord
             }
 
             fn get_identifier(&self) -> &'static str {
