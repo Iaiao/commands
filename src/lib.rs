@@ -170,6 +170,11 @@ mod tests {
             _context {
                 Ok(())
         });
+        crate::command!(dispatcher,
+            "3test2",
+            _context {
+                Ok(())
+        });
 
         assert_eq!(
             dispatcher.tab_complete(r#"te"#, ()),
@@ -223,5 +228,15 @@ mod tests {
                 ),
             ])
         );
+
+        crate::command!(dispatcher,
+            "testspaces",
+            "s": StringArgument::new(StringProperties::GreedyPhrase), "none" => _s: String,
+            _context {
+                Ok(())
+        });
+
+        assert_eq!(dispatcher.tab_complete(r#"testspaces a "#, ()), None);
+        assert_eq!(dispatcher.tab_complete(r#"testspaces a b"#, ()), None);
     }
 }

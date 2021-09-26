@@ -114,31 +114,27 @@ impl CommandNode {
         context: &mut U,
         dispatcher: &CommandDispatcher<U>,
     ) -> Option<Vec<(String, Option<String>)>> {
-        if !prompt.contains(' ') {
-            match self {
-                CommandNode::Root { children } => {
-                    let mut result: Option<Vec<(String, Option<String>)>> = None;
-                    for child in children {
-                        if let Some(suggestions) =
-                            dispatcher.find_node_suggestions(prompt, context, *child)
-                        {
-                            if let Some(result) = result.as_mut() {
-                                result.extend(suggestions);
-                            } else {
-                                result = Some(suggestions);
-                            }
+        match self {
+            CommandNode::Root { children } => {
+                let mut result: Option<Vec<(String, Option<String>)>> = None;
+                for child in children {
+                    if let Some(suggestions) =
+                        dispatcher.find_node_suggestions(prompt, context, *child)
+                    {
+                        if let Some(result) = result.as_mut() {
+                            result.extend(suggestions);
+                        } else {
+                            result = Some(suggestions);
                         }
                     }
-                    result
                 }
-                CommandNode::Literal { name, .. } => Some(vec![(name.to_owned(), None)]),
-                CommandNode::Argument {
-                    suggestions_type, ..
-                } => dispatcher.get_completions(suggestions_type, context, prompt),
+                result
             }
-        } else {
-            match self {
-                CommandNode::Root { children } => {
+            CommandNode::Literal { children, name, .. } => {
+                if name.starts_with(prompt) {
+                    Some(vec![(name.to_string(), None)])
+                } else if prompt.starts_with(&format!("{} ", name)) {
+                    prompt = &prompt[name.len() + 1..];
                     let mut result: Option<Vec<(String, Option<String>)>> = None;
                     for child in children {
                         if let Some(suggestions) =
@@ -152,31 +148,22 @@ impl CommandNode {
                         }
                     }
                     result
+                } else {
+                    None
                 }
-                CommandNode::Literal { children, name, .. } => {
-                    let mut result: Option<Vec<(String, Option<String>)>> = None;
-                    if prompt.starts_with(&format!("{} ", name)) {
-                        prompt = &prompt[name.len() + 1..];
-                        for child in children {
-                            if let Some(suggestions) =
-                                dispatcher.find_node_suggestions(prompt, context, *child)
-                            {
-                                if let Some(result) = result.as_mut() {
-                                    result.extend(suggestions);
-                                } else {
-                                    result = Some(suggestions);
-                                }
-                            }
-                        }
-                    }
-                    result
-                }
-                CommandNode::Argument {
-                    parser, children, ..
-                } => {
-                    let mut result: Option<Vec<(String, Option<String>)>> = None;
-                    if let Some((size, _)) = parser.parse(prompt) {
+            }
+            CommandNode::Argument {
+                parser,
+                children,
+                suggestions_type,
+                ..
+            } => {
+                if let Some((size, _)) = parser.parse(prompt) {
+                    if prompt.len() == size {
+                        dispatcher.get_completions(suggestions_type, context, prompt)
+                    } else {
                         prompt = &prompt[size + 1..];
+                        let mut result: Option<Vec<(String, Option<String>)>> = None;
                         for child in children {
                             if let Some(suggestions) =
                                 dispatcher.find_node_suggestions(prompt, context, *child)
@@ -188,8 +175,10 @@ impl CommandNode {
                                 }
                             }
                         }
+                        result
                     }
-                    result
+                } else {
+                    dispatcher.get_completions(suggestions_type, context, prompt)
                 }
             }
         }
