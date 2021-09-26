@@ -285,13 +285,8 @@ impl ArgumentParser for EntityArgument {
                 ));
             }
             "@s" => {
-                requirements.push(EntitySelectorPredicate::Sort(
-                    EntitySelectorSorting::Arbitrary,
-                ));
-                requirements.push(EntitySelectorPredicate::Name(BoolPredicate(
-                    true,
-                    "@s".to_owned(),
-                )));
+                requirements.push(EntitySelectorPredicate::Sender);
+                requirements.push(EntitySelectorPredicate::Limit(1));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
             something => {
@@ -396,7 +391,6 @@ pub enum EntitySelectorPredicate {
     /// if quotes are applied. This cannot be a JSON text compound.
     /// Arguments testing for equality cannot be duplicated,
     /// while arguments testing for inequality can.
-    /// Can be "@s" to indicate sender's identity (not only by name, supports command blocks, console, etc.)
     Name(BoolPredicate<String>),
     /// Filter target selection based on the entity's NBT data
     //Nbt(BoolPredicate<NbtPredicate>),
@@ -442,6 +436,9 @@ pub enum EntitySelectorPredicate {
     /// Values vary from -180 (facing due north) to -90 (facing due east)
     /// to 0 (facing due south) to +90 (facing due west) to +180 (facing due north again)
     ZRotation(WrappedRange<f32>),
+    /// Only match command sender. Only used when deserializing @s
+    #[serde(skip)]
+    Sender,
 }
 
 #[derive(Serialize, Deserialize)]
