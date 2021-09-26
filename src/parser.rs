@@ -19,7 +19,7 @@ pub trait ParserProperties {
 }
 
 impl ParserProperties for () {
-    fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
+    fn write(&self, _buf: &mut dyn Write) -> std::io::Result<usize> {
         Ok(0)
     }
 }

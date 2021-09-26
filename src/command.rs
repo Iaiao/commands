@@ -9,7 +9,7 @@ macro_rules! command {
             $(
                 command.with_argument($name, std::boxed::Box::new($parser), $crate::node::CompletionType::Custom($completion.to_owned()));
             )*
-            command.executes(move |args, $context| {
+            command.executes(move |args, mut $context| {
                 let mut args = args.into_iter();
                 $(
                     let $arg: $typ = *args.next().unwrap().downcast::<$typ>().unwrap();
@@ -31,7 +31,7 @@ macro_rules! command {
     ($dispatcher: ident, $command: literal, $context: ident $executor: block) => {
         {
             let mut command = $crate::dispatcher::CommandDispatcher::create_command($dispatcher, $command).unwrap();
-            command.executes(|args, $context| {
+            command.executes(|args, mut $context| {
                 drop(args);
                 let run = || -> $crate::command::anyhow::Result<()> {
                     $executor
