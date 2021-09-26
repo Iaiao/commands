@@ -12,7 +12,6 @@ mod tests {
     use crate::node::CompletionType;
     use crate::parser::{ArgumentParser, ParserProperties};
     use std::any::Any;
-    use std::io::Write;
 
     #[test]
     fn simple_command() {
