@@ -4,12 +4,8 @@ use crate::dispatcher::CommandDispatcher;
 use crate::parser::ArgumentParser;
 use crate::varint::write_varint;
 
-#[derive(Debug, Clone)]
 #[repr(C)]
-pub enum CommandNode<T>
-where
-    T: ArgumentParser,
-{
+pub enum CommandNode {
     Root {
         children: Vec<usize>,
     },
@@ -23,56 +19,22 @@ where
         execute: Option<usize>,
         name: String,
         suggestions_type: CompletionType,
-        parser: T,
+        parser: Box<dyn ArgumentParser>,
         children: Vec<usize>,
         parent: usize,
     },
 }
 
-impl<T, U> PartialEq<CommandNode<U>> for CommandNode<T>
-where
-    T: ArgumentParser,
-    U: ArgumentParser,
-{
-    fn eq(&self, other: &CommandNode<U>) -> bool {
-        match (&self, &other) {
-            (
-                &CommandNode::Root { children },
-                &CommandNode::Root {
-                    children: children_1,
-                },
-            ) => children == children_1,
-            (
-                &CommandNode::Literal {
-                    execute,
-                    name,
-                    children,
-                    parent,
-                },
-                &CommandNode::Literal {
-                    execute: execute_1,
-                    name: name_1,
-                    children: children_1,
-                    parent: parent_1,
-                },
-            ) => {
-                execute == execute_1
-                    && name == name_1
-                    && children == children_1
-                    && parent == parent_1
-            }
-            (&CommandNode::Argument { .. }, &CommandNode::Argument { .. }) => {
-                unimplemented!()
-            }
-            _ => false,
+#[allow(clippy::derivable_impls)]
+impl Default for CommandNode {
+    fn default() -> Self {
+        CommandNode::Root {
+            children: Default::default(),
         }
     }
 }
 
-impl<T> CommandNode<T>
-where
-    T: ArgumentParser,
-{
+impl CommandNode {
     pub fn matches<U>(
         &self,
         command: &str,
@@ -310,7 +272,8 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+#[repr(C)]
 pub enum CompletionType {
     Custom(String),
     AllRecipes,

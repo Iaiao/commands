@@ -13,7 +13,7 @@ pub type Completer<T> = Box<dyn Fn(&str, &mut T) -> Vec<(String, Option<String>)
 
 pub struct CommandDispatcher<T> {
     // 0 is always root node
-    pub(crate) nodes: Slab<Box<CommandNode<Box<dyn ArgumentParser>>>>,
+    pub(crate) nodes: Slab<CommandNode>,
     pub(crate) executors: Slab<Box<dyn Fn(Args, T) -> bool>>,
     pub(crate) tab_completers: HashMap<String, Completer<T>>,
 }
@@ -27,9 +27,7 @@ impl<T> Default for CommandDispatcher<T> {
 impl<T> CommandDispatcher<T> {
     pub fn new() -> CommandDispatcher<T> {
         let mut nodes = Slab::new();
-        nodes.insert(Box::new(CommandNode::Root {
-            children: Vec::new(),
-        }));
+        nodes.insert(CommandNode::default());
         CommandDispatcher {
             nodes,
             executors: Slab::new(),
@@ -85,7 +83,7 @@ impl<T> CommandDispatcher<T> {
             let mut args = Vec::new();
             for node_id in cmd {
                 if let Some(node) = self.nodes.get(node_id) {
-                    match &**node {
+                    match node {
                         CommandNode::Root { .. } => panic!("Found root node in find_command"),
                         CommandNode::Literal { name, execute, .. } => {
                             if let Some(execute) = execute {
@@ -158,18 +156,18 @@ impl<T> CommandDispatcher<T> {
     pub fn into_parts(
         self,
     ) -> (
-        Slab<Box<CommandNode<Box<dyn ArgumentParser>>>>,
+        Slab<CommandNode>,
         Slab<Box<dyn Fn(Args, T) -> bool>>,
         HashMap<String, Completer<T>>,
     ) {
         (self.nodes, self.executors, self.tab_completers)
     }
 
-    pub fn add_nodes(&mut self, nodes: Vec<Box<CommandNode<Box<dyn ArgumentParser>>>>) {
+    pub fn add_nodes(&mut self, nodes: Vec<CommandNode>) {
         let nodes_len = self.nodes.len();
         let executors_len = self.executors.len();
         for node in nodes {
-            match *node {
+            match node {
                 CommandNode::Root { .. } => (),
                 CommandNode::Literal {
                     execute,
@@ -177,7 +175,7 @@ impl<T> CommandDispatcher<T> {
                     children,
                     parent,
                 } => {
-                    let i = self.nodes.insert(Box::new(CommandNode::Literal {
+                    let i = self.nodes.insert(CommandNode::Literal {
                         execute: execute.map(|e| e + executors_len),
                         name,
                         children: children.iter().map(|c| c + nodes_len - 1).collect(),
@@ -186,7 +184,7 @@ impl<T> CommandDispatcher<T> {
                         } else {
                             parent + nodes_len - 1
                         },
-                    }));
+                    });
                     if parent == 0 {
                         self.nodes.get_mut(0).unwrap().add_child(i);
                     }
@@ -199,7 +197,7 @@ impl<T> CommandDispatcher<T> {
                     children,
                     parent,
                 } => {
-                    self.nodes.insert(Box::new(CommandNode::Argument {
+                    self.nodes.insert(CommandNode::Argument {
                         execute: execute.map(|e| e + executors_len),
                         name,
                         suggestions_type,
@@ -210,7 +208,7 @@ impl<T> CommandDispatcher<T> {
                         } else {
                             parent + nodes_len - 1
                         },
-                    }));
+                    });
                 }
             }
         }
@@ -220,18 +218,8 @@ impl<T> CommandDispatcher<T> {
         self.executors.insert(executor)
     }
 
-    fn insert_child(
-        &mut self,
-        node: usize,
-        child: CommandNode<Box<dyn ArgumentParser>>,
-    ) -> anyhow::Result<usize> {
-        let i = self
-            .nodes
-            .iter()
-            .filter(|(_, node)| matches!(***node, CommandNode::Literal { .. }))
-            .find(|(_, node)| ***node == child)
-            .map(|(i, _)| i)
-            .unwrap_or_else(|| self.nodes.insert(Box::new(child)));
+    fn insert_child(&mut self, node: usize, child: CommandNode) -> anyhow::Result<usize> {
+        let i = self.nodes.insert(child);
         let parent = self
             .nodes
             .iter_mut()
@@ -288,15 +276,12 @@ impl<'a, T> CreateCommand<'a, T> {
         self
     }
 
-    pub fn with_argument<A>(
+    pub fn with_argument(
         &mut self,
         name: &str,
-        parser: A,
+        parser: Box<dyn ArgumentParser>,
         completion_type: CompletionType,
-    ) -> &mut Self
-    where
-        A: ArgumentParser + 'static,
-    {
+    ) -> &mut Self {
         let i = self
             .dispatcher
             .insert_child(
@@ -305,7 +290,7 @@ impl<'a, T> CreateCommand<'a, T> {
                     execute: None,
                     name: name.to_owned(),
                     suggestions_type: completion_type,
-                    parser: Box::new(parser),
+                    parser,
                     children: vec![],
                     parent: self.current_node,
                 },

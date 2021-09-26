@@ -182,7 +182,14 @@ impl ArgumentParser for StringArgument {
                         .map(|i| (i, Box::new(input[..i].to_string()) as Box<dyn Any>))
                 }
             }
-            StringProperties::GreedyPhrase => Some((input.len(), Box::new(input.to_string()))),
+            StringProperties::GreedyPhrase => {
+                let i = if input.ends_with(' ') {
+                    input.len() - 1
+                } else {
+                    input.len()
+                };
+                Some((i, Box::new(input[..i].to_string())))
+            }
         }
     }
 
@@ -1752,6 +1759,7 @@ mod entity_selector_serde {
     #[cfg(test)]
     mod tests {
         use std::collections::HashMap;
+        use std::iter::FromIterator;
 
         use crate::arguments::{
             AdvancementPredicate, BoolPredicate, EntitySelectorPredicate, EntitySelectorSorting,
@@ -1759,7 +1767,6 @@ mod entity_selector_serde {
         };
 
         use super::*;
-        use std::iter::FromIterator;
 
         #[test]
         fn test_serialize_struct() {

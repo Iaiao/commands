@@ -35,7 +35,7 @@ mod tests {
             .unwrap()
             .with_argument(
                 "arg",
-                DoubleArgument::default(),
+                Box::new(DoubleArgument::default()),
                 CompletionType::Custom("none".to_string()),
             )
             .executes(|args, _context| {
@@ -56,7 +56,7 @@ mod tests {
             .with(|cmd| {
                 cmd.with_argument(
                     "arg",
-                    DoubleArgument::default(),
+                    Box::new(DoubleArgument::default()),
                     CompletionType::Custom("none".to_string()),
                 )
                 .executes(|args, _context| {

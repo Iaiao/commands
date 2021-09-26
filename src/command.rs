@@ -7,7 +7,7 @@ macro_rules! command {
         {
             let mut command = $crate::dispatcher::CommandDispatcher::create_command($dispatcher, $command).unwrap();
             $(
-                command.with_argument($name, $parser, $crate::node::CompletionType::Custom($completion.to_owned()));
+                command.with_argument($name, std::boxed::Box::new($parser), $crate::node::CompletionType::Custom($completion.to_owned()));
             )*
             command.executes(move |args, $context| {
                 let mut args = args.into_iter();
