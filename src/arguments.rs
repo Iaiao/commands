@@ -295,7 +295,11 @@ impl ArgumentParser for EntityArgument {
                 let selector = Uuid::from_str(something)
                     .map(|uuid| EntitySelector::Uuid(uuid))
                     .unwrap_or(EntitySelector::Name(something.to_owned()));
-                return Some((something.len(), Box::new(selector)));
+                return if self.0.only_players && matches!(selector, EntitySelector::Uuid(_)) {
+                    None
+                } else {
+                    Some((something.len(), Box::new(selector)));
+                };
             }
         };
         let i = if input.contains('[') {
