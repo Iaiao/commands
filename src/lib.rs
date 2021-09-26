@@ -152,12 +152,6 @@ mod tests {
             }
         }
 
-        impl ParserProperties for () {
-            fn write(&self, _buf: &mut dyn Write) -> std::io::Result<usize> {
-                Ok(0)
-            }
-        }
-
         let dispatcher = &mut CommandDispatcher::<()>::new();
         crate::command!(dispatcher,
             "test",
