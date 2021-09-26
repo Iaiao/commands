@@ -17,3 +17,9 @@ pub trait ArgumentParser {
 pub trait ParserProperties {
     fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize>;
 }
+
+impl ParserProperties for () {
+    fn write(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
+        Ok(0)
+    }
+}
