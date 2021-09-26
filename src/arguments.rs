@@ -9,6 +9,7 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use uuid::Uuid;
 
 use crate::parser::{ArgumentParser, ParserProperties};
 
@@ -239,12 +240,9 @@ impl EntityArgument {
 
 impl ArgumentParser for EntityArgument {
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
-        let mut i = 0;
-        let mut name = false;
         let mut requirements = Vec::new();
         match input.split('[').next().unwrap() {
             "@p" => {
-                i += 2;
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Nearest,
                 ));
@@ -252,26 +250,22 @@ impl ArgumentParser for EntityArgument {
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
             "@r" => {
-                i += 2;
                 requirements.push(EntitySelectorPredicate::Sort(EntitySelectorSorting::Random));
                 requirements.push(EntitySelectorPredicate::Limit(1));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
             "@a" => {
-                i += 2;
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Arbitrary,
                 ));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
             "@e" => {
-                i += 2;
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Arbitrary,
                 ));
             }
             "@s" => {
-                i += 2;
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Arbitrary,
                 ));
@@ -281,29 +275,25 @@ impl ArgumentParser for EntityArgument {
                 )));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
-            player_name => {
-                let player_name = player_name.split_whitespace().next()?;
-                i += player_name.len();
-                name = true;
-                requirements.push(EntitySelectorPredicate::Sort(
-                    EntitySelectorSorting::Arbitrary,
-                ));
-                requirements.push(EntitySelectorPredicate::Name(BoolPredicate(
-                    true,
-                    player_name.to_owned(),
-                )));
-                requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
+            something => {
+                let something = something.split_whitespace().next()?;
+                let selector = Uuid::from_str(something)
+                    .map(|uuid| EntitySelector::Uuid(uuid))
+                    .unwrap_or(EntitySelector::Name(something.to_owned()));
+                return Some((something.len(), Box::new(selector)));
             }
         };
-        if !name && input.contains('[') {
-            let start = input.find('[').unwrap();
+        let i = if input.contains('[') {
+            let start = input.find('[').unwrap(); // always 2 for now
             let (predicates, left) =
                 entity_selector_serde::from_str::<Vec<EntitySelectorPredicate>>(&input[start..])
                     .ok()?;
             requirements.extend(predicates);
-            i += (input.len() - left.len()) + 1
-        }
-        Some((i, Box::new(EntitySelector { requirements })))
+            input.len() - left.len()
+        } else {
+            2
+        };
+        Some((i, Box::new(EntitySelector::Selector(requirements))))
     }
 
     fn get_properties(&self) -> &dyn ParserProperties {
@@ -334,13 +324,15 @@ impl ParserProperties for EntityProperties {
     }
 }
 
-pub struct EntitySelector {
-    /// Entity filters (except for [`EntitySelectorPredicate::Sort`], it's not a filter)
-    pub requirements: Vec<EntitySelectorPredicate>,
+#[derive(Debug, Clone, PartialEq)]
+pub enum EntitySelector {
+    Selector(Vec<EntitySelectorPredicate>),
+    Name(String),
+    Uuid(Uuid),
 }
 
 /// A struct for data in @e\[data\]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum EntitySelectorPredicate {
     /// Filter target selection based on the entity's identifier.
@@ -436,7 +428,7 @@ pub enum EntitySelectorPredicate {
 #[derive(Serialize, Deserialize)]
 pub struct NbtPredicate; // TODO
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum EntitySelectorSorting {
     /// Sort by increasing distance. (Default for @p)
@@ -449,7 +441,7 @@ pub enum EntitySelectorSorting {
     Arbitrary,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 #[serde(untagged)]
 pub enum AdvancementPredicate {
@@ -459,7 +451,7 @@ pub enum AdvancementPredicate {
     Criteria(HashMap<String, bool>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum WrappedRange<T> {
     RangeFrom(RangeFrom<T>),
     RangeTo(RangeToInclusive<T>),
@@ -628,7 +620,7 @@ where
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BoolPredicate<T>(pub bool, pub T);
 
 impl<T> Serialize for BoolPredicate<T>
@@ -699,7 +691,7 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Gamemode {
     Survival,
@@ -733,7 +725,7 @@ impl FromStr for Gamemode {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum EntityType {
     Player,
@@ -1903,4 +1895,3 @@ mod entity_selector_serde {
         }
     }
 }
-
