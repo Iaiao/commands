@@ -12,6 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
 use crate::parser::{ArgumentParser, ParserProperties};
+use crate::arguments::EntitySelectorPredicate::Limit;
 
 // Unstable, should be removed when we increment our MSRV
 fn cloned_bound<T: Clone>(bound: Bound<&T>) -> Bound<T> {
@@ -307,7 +308,14 @@ impl ArgumentParser for EntityArgument {
         } else {
             2
         };
-        Some((i, Box::new(EntitySelector::Selector(requirements))))
+        if self.0.single && !requirements.contains(&EntitySelectorPredicate::Limit(1)) {
+            // TODO change return type to Result to report parsing errors
+            None
+        } else if self.0.only_players && !requirements.contains(&EntitySelectorPredicate::Type(EntityType::Player)) {
+            None
+        } else {
+            Some((i, Box::new(EntitySelector::Selector(requirements))))
+        }
     }
 
     fn get_properties(&self) -> &dyn ParserProperties {
