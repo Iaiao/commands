@@ -86,7 +86,7 @@ impl CommandNode {
                 ..
             } => {
                 if let Some((size, _)) = parser.parse(command) {
-                    if execute.is_some() {
+                    if execute.is_some() && command.len() == size {
                         Some(Vec::new())
                     } else if command.len() == size {
                         None
