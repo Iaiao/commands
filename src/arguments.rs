@@ -312,13 +312,24 @@ impl ArgumentParser for EntityArgument {
         } else {
             2
         };
+        let mut only_allows_players = false;
+        let mut single = false;
+        for requirement in requirements {
+            match requirement {
+                EntitySelectorPredicate::Type(EntityType::Player) => only_allows_players = true,
+                EntitySelectorPredicate::Advancements(_) => only_allows_players = true,
+                EntitySelectorPredicate::Gamemode(_) => only_allows_players = true,
+                EntitySelectorPredicate::Level(_) => only_allows_players = true,
+                EntitySelectorPredicate::Sender => only_allows_players = true, // TODO console shouldn't do this
+                EntitySelectorPredicate::Limit(1) => single = true,
+                _ => ()
+            }
+        }
+        // TODO change return type to Result to report parsing errors
         #[allow(clippy::if_same_then_else)]
-        if self.0.single && !requirements.contains(&EntitySelectorPredicate::Limit(1)) {
-            // TODO change return type to Result to report parsing errors
+        if self.0.single && !single {
             None
-        } else if self.0.only_players
-            && !requirements.contains(&EntitySelectorPredicate::Type(EntityType::Player))
-        {
+        } else if self.0.only_players && !only_allows_players {
             None
         } else {
             Some((i, Box::new(EntitySelector::Selector(requirements))))
