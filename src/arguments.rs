@@ -314,7 +314,7 @@ impl ArgumentParser for EntityArgument {
         };
         let mut only_allows_players = false;
         let mut single = false;
-        for requirement in requirements {
+        for requirement in &requirements {
             match requirement {
                 EntitySelectorPredicate::Type(EntityType::Player) => only_allows_players = true,
                 EntitySelectorPredicate::Advancements(_) => only_allows_players = true,
@@ -322,7 +322,7 @@ impl ArgumentParser for EntityArgument {
                 EntitySelectorPredicate::Level(_) => only_allows_players = true,
                 EntitySelectorPredicate::Sender => only_allows_players = true, // TODO console shouldn't do this
                 EntitySelectorPredicate::Limit(1) => single = true,
-                _ => ()
+                _ => (),
             }
         }
         // TODO change return type to Result to report parsing errors
