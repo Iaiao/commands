@@ -312,6 +312,7 @@ impl ArgumentParser for EntityArgument {
         } else {
             2
         };
+        #[allow(clippy::if_same_then_else)]
         if self.0.single && !requirements.contains(&EntitySelectorPredicate::Limit(1)) {
             // TODO change return type to Result to report parsing errors
             None
@@ -449,7 +450,7 @@ pub enum EntitySelectorPredicate {
     /// measured clockwise in degrees from due south (or the positive Z direction).
     /// Values vary from -180 (facing due north) to -90 (facing due east)
     /// to 0 (facing due south) to +90 (facing due west) to +180 (facing due north again)
-    ZRotation(WrappedRange<f32>),
+    YRotation(WrappedRange<f32>),
     /// Only match command sender. Only used when deserializing @s
     #[serde(skip)]
     Sender,
