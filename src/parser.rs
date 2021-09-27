@@ -1,6 +1,6 @@
 use std::any::Any;
-use std::io::Write;
 use std::fmt::Debug;
+use std::io::Write;
 
 /// Argument parser
 pub trait ArgumentParser: Debug {

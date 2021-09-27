@@ -77,14 +77,12 @@ impl<T> CommandDispatcher<T> {
             let names = name.split(' ');
             let mut node = 0;
             for name in names {
-                node = self.insert_child(
-                    CommandNode::Literal {
-                        execute: None,
-                        name: name.to_owned(),
-                        children: vec![],
-                        parent: node,
-                    },
-                )?;
+                node = self.insert_child(CommandNode::Literal {
+                    execute: None,
+                    name: name.to_owned(),
+                    children: vec![],
+                    parent: node,
+                })?;
             }
             Ok(CreateCommand {
                 current_node: node,
@@ -269,9 +267,9 @@ pub struct CreateCommand<'a, T> {
 }
 
 impl<'a, T> CreateCommand<'a, T> {
-    pub fn with(mut self, f: impl FnOnce(&mut Self)) -> Self {
+    pub fn with(&mut self, f: impl FnOnce(&mut Self)) -> &mut Self {
         let node = self.current_node;
-        f(&mut self);
+        f(self);
         self.current_node = node;
         self
     }
@@ -279,14 +277,12 @@ impl<'a, T> CreateCommand<'a, T> {
     pub fn with_subcommand(&mut self, name: &str) -> &mut Self {
         let i = self
             .dispatcher
-            .insert_child(
-                CommandNode::Literal {
-                    execute: None,
-                    name: name.to_owned(),
-                    children: vec![],
-                    parent: self.current_node,
-                },
-            )
+            .insert_child(CommandNode::Literal {
+                execute: None,
+                name: name.to_owned(),
+                children: vec![],
+                parent: self.current_node,
+            })
             .unwrap();
         self.current_node = i;
         self
@@ -300,16 +296,14 @@ impl<'a, T> CreateCommand<'a, T> {
     ) -> &mut Self {
         let i = self
             .dispatcher
-            .insert_child(
-                CommandNode::Argument {
-                    execute: None,
-                    name: name.to_owned(),
-                    suggestions_type: completion_type,
-                    parser,
-                    children: vec![],
-                    parent: self.current_node,
-                },
-            )
+            .insert_child(CommandNode::Argument {
+                execute: None,
+                name: name.to_owned(),
+                suggestions_type: completion_type,
+                parser,
+                children: vec![],
+                parent: self.current_node,
+            })
             .unwrap();
         self.current_node = i;
         self
