@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::io::Write;
 
 use crate::dispatcher::CommandDispatcher;
@@ -5,6 +6,7 @@ use crate::parser::ArgumentParser;
 use crate::varint::write_varint;
 
 #[repr(C)]
+#[derive(Debug)]
 pub enum CommandNode {
     Root {
         children: Vec<usize>,
@@ -184,6 +186,15 @@ impl CommandNode {
         }
     }
 
+    pub fn parent(&self) -> Option<usize> {
+        match self {
+            CommandNode::Root { .. } => None,
+            CommandNode::Literal { parent, .. } | CommandNode::Argument { parent, .. } => {
+                Some(*parent)
+            }
+        }
+    }
+
     pub fn write_to(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
         let mut wrote = 0;
         match self {
@@ -248,7 +259,11 @@ impl CommandNode {
         match self {
             CommandNode::Root { children }
             | CommandNode::Literal { children, .. }
-            | CommandNode::Argument { children, .. } => children.push(child),
+            | CommandNode::Argument { children, .. } => {
+                if !children.contains(&child) {
+                    children.push(child)
+                }
+            }
         }
     }
 

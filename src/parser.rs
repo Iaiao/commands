@@ -1,8 +1,9 @@
 use std::any::Any;
 use std::io::Write;
+use std::fmt::Debug;
 
 /// Argument parser
-pub trait ArgumentParser {
+pub trait ArgumentParser: Debug {
     /// Parse input string to [`Self::Output`]
     /// Return Some(amount of chars to skip, output) if found, None otherwise
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)>;

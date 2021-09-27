@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
 
 use anyhow::{anyhow, bail};
 use slab::Slab;
@@ -16,6 +17,22 @@ pub struct CommandDispatcher<T> {
     pub(crate) nodes: Slab<CommandNode>,
     pub(crate) executors: Slab<Box<dyn Fn(Args, T) -> bool>>,
     pub(crate) tab_completers: HashMap<String, Completer<T>>,
+}
+
+impl<T> Debug for CommandDispatcher<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandDispatcher")
+            .field(
+                "nodes",
+                &self.nodes.iter().map(|(_, n)| n).collect::<Vec<_>>(),
+            )
+            .field(
+                "executors",
+                &format!("Executors ({})", self.executors.len()),
+            )
+            .field("tab_completers", &self.tab_completers.keys())
+            .finish()
+    }
 }
 
 impl<T> Default for CommandDispatcher<T> {
@@ -61,7 +78,6 @@ impl<T> CommandDispatcher<T> {
             let mut node = 0;
             for name in names {
                 node = self.insert_child(
-                    node,
                     CommandNode::Literal {
                         execute: None,
                         name: name.to_owned(),
@@ -218,12 +234,13 @@ impl<T> CommandDispatcher<T> {
         self.executors.insert(executor)
     }
 
-    fn insert_child(&mut self, node: usize, child: CommandNode) -> anyhow::Result<usize> {
+    fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
+        let parent = child.parent().unwrap();
         let i = self.nodes.insert(child);
         let parent = self
             .nodes
             .iter_mut()
-            .find(|(i, _)| *i == node)
+            .find(|(i, _)| *i == parent)
             .map(|(_, node)| node)
             .ok_or_else(|| anyhow!("Couldn't find child node"))?;
         parent.add_child(i);
@@ -263,7 +280,6 @@ impl<'a, T> CreateCommand<'a, T> {
         let i = self
             .dispatcher
             .insert_child(
-                self.current_node,
                 CommandNode::Literal {
                     execute: None,
                     name: name.to_owned(),
@@ -285,7 +301,6 @@ impl<'a, T> CreateCommand<'a, T> {
         let i = self
             .dispatcher
             .insert_child(
-                self.current_node,
                 CommandNode::Argument {
                     execute: None,
                     name: name.to_owned(),
