@@ -56,6 +56,7 @@ macro_rules! impl_integer_argument {
                 let mut i = 0;
                 for char in input.chars() {
                     match char {
+                        '-' if i == 0 => i += 1,
                         '0'..='9' => i += 1,
                         '.' if $is_float => i += 1,
                         _ => break,
@@ -1586,6 +1587,7 @@ mod entity_selector_serde {
         {
             for (i, ch) in self.input.chars().enumerate() {
                 match ch {
+                    '-' if i == 0 => continue,
                     '0'..='9' | '.' => continue,
                     _ => {
                         let res = visitor.visit_f32(
@@ -1607,6 +1609,7 @@ mod entity_selector_serde {
         {
             for (i, ch) in self.input.chars().enumerate() {
                 match ch {
+                    '-' if i == 0 => continue,
                     '0'..='9' | '.' => continue,
                     _ => {
                         let res = visitor.visit_f64(
