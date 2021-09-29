@@ -7,10 +7,12 @@ use std::ops::{Bound, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeTo
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail};
-use serde::de::Visitor;
+use quartz_nbt::NbtCompound;
+use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
+use crate::arguments::entity_selector_serde::EntitySelectorDeserializer;
 use crate::parser::{ArgumentParser, ParserProperties};
 
 // Unstable, should be removed when we increment our MSRV
@@ -430,7 +432,7 @@ pub enum EntitySelectorPredicate {
     /// Specify selection priority
     Sort(EntitySelectorSorting),
     /// Filter target selection based on the entity's scoreboard tags (not implemented yet)
-    Tag(BoolPredicate<String>),
+    Tag(BoolPredicate<Tag>),
     /// Filter target selection based on teams.
     /// Arguments testing for equality cannot be duplicated,
     /// while arguments testing for inequality can.
@@ -662,6 +664,9 @@ where
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tag(pub NbtCompound);
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct BoolPredicate<T>(pub bool, pub T);
 
@@ -690,6 +695,37 @@ where
         D: Deserializer<'de>,
     {
         deserializer.deserialize_str(BoolPredicateVisitor(PhantomData))
+    }
+}
+
+impl Serialize for BoolPredicate<Tag> {
+    fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        unimplemented!()
+    }
+}
+
+impl<'de> Deserialize<'de> for BoolPredicate<Tag> {
+    fn deserialize<D>(mut deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // SAFETY
+        // Can't do a check because D is not 'static.
+        // But anyway the only usage of BoolPredicate<Tag> is entity selector
+        let d =
+            unsafe { &mut *(&mut deserializer as *mut _ as *mut &mut EntitySelectorDeserializer) };
+        let mut b = true;
+        if d.peek_char() == Ok('!') {
+            b = false;
+            d.next_char().unwrap();
+        }
+        let (chars, tag) = quartz_nbt::snbt::parse_and_size(d.input)
+            .map_err(|e| D::Error::custom(e.to_string()))?;
+        d.input = &d.input[chars..];
+        Ok(BoolPredicate(b, Tag(tag)))
     }
 }
 
@@ -1396,7 +1432,7 @@ mod entity_selector_serde {
     }
 
     pub struct EntitySelectorDeserializer<'de> {
-        input: &'de str,
+        pub input: &'de str,
     }
 
     impl<'de> EntitySelectorDeserializer<'de> {
@@ -1415,14 +1451,14 @@ mod entity_selector_serde {
     }
 
     impl<'de> EntitySelectorDeserializer<'de> {
-        fn peek_char(&mut self) -> Result<char> {
+        pub fn peek_char(&self) -> Result<char> {
             self.input
                 .chars()
                 .next()
                 .ok_or_else(|| SelectorError("Unexpected EOF".to_string()))
         }
 
-        fn next_char(&mut self) -> Result<char> {
+        pub fn next_char(&mut self) -> Result<char> {
             let ch = self.peek_char()?;
             self.input = &self.input[ch.len_utf8()..];
             Ok(ch)

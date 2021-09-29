@@ -91,7 +91,7 @@ mod tests {
         });
 
         assert!(dispatcher.execute_command(
-            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..-10] abc def"#,
+            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..-10,tag=!{foo: bar}] abc def"#,
             ()
         ));
     }
