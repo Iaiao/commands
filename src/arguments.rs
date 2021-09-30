@@ -2176,13 +2176,30 @@ impl FromStr for ResourceLocation {
     type Err = anyhow::Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
+        macro_rules! only_these_chars {
+            ($var: expr, $($p: pat)|+) => {
+                {
+                    for c in $var.chars() {
+                        match c {
+                            $($p)|+ => continue,
+                            _ => bail!("Found illegal characters")
+                        }
+                    }
+                    $var
+                }
+            }
+        }
+
         let s = value.split(':').collect::<Vec<_>>();
         match s.len() {
             1 => Ok(ResourceLocation::new(
                 "minecraft".to_string(),
-                s[0].to_string(),
+                only_these_chars!(s[0].to_string(), '0'..='9' | 'a'..='z' | '_' | '-' | '.' | '/'),
             )),
-            2 => Ok(ResourceLocation::new(s[0].to_string(), s[1].to_string())),
+            2 => Ok(ResourceLocation::new(
+                only_these_chars!(s[0].to_string(), '0'..='9' | 'a'..='z' | '_' | '-'),
+                only_these_chars!(s[1].to_string(), '0'..='9' | 'a'..='z' | '_' | '-' | '.' | '/'),
+            )),
             _ => bail!("Resource location must not contain additional `:` characters"),
         }
     }
