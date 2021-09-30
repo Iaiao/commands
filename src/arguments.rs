@@ -263,7 +263,7 @@ impl EntityArgument {
 impl ArgumentParser for EntityArgument {
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
         let mut requirements = Vec::new();
-        match input.split('[').next().unwrap() {
+        match input.split(&['[', ' '][..]).next().unwrap() {
             "@p" => {
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Nearest,
