@@ -84,14 +84,15 @@ mod tests {
                 "test",
                 "x": IntegerArgument::new(0..=5), "none" => _x: i32,
                 "y": DoubleArgument::new(0.0..3.0), "none" => _y: f64,
-                "entities": EntityArgument::ENTITIES, "entity" => _entities: EntitySelector,
+                "entities": EntityArgument::ENTITIES, "none" => _entities: EntitySelector,
+                "item": ItemPredicateArgument, "none" => _item_predicate: ItemPredicate,
                 "string": StringArgument::new(StringProperties::GreedyPhrase), "none" => _s: String,
                 _context {
             Ok(())
         });
 
         assert!(dispatcher.execute_command(
-            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..-10,tag=!{foo: bar}] abc def"#,
+            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..-10,tag=!{foo: bar}] #boats{foo: bar} abc def"#,
             ()
         ));
     }

@@ -1,9 +1,11 @@
 use std::any::Any;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
 use std::marker::PhantomData;
 use std::ops::{Bound, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeToInclusive};
+use std::prelude::rust_2021::TryFrom;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail};
@@ -2091,6 +2093,99 @@ mod entity_selector_serde {
                 expected,
                 from_str::<Vec<EntitySelectorPredicate>>(j).unwrap().0
             );
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ItemPredicateArgument;
+
+impl ArgumentParser for ItemPredicateArgument {
+    fn parse(&self, mut input: &str) -> Option<(usize, Box<dyn Any>)> {
+        let is_tag = input.starts_with('#');
+        if is_tag {
+            input = &input[1..];
+        }
+        let space = input.find(' ').unwrap_or(input.len());
+        let item;
+        let mut tag = None;
+        let mut tag_len = 0;
+        if let Some(brace) = input.find('{') {
+            if brace < space {
+                item = &input[..brace];
+                let (len, t) = quartz_nbt::snbt::parse_and_size(&input[brace..]).ok()?;
+                tag_len = len;
+                tag = Some(t);
+            } else {
+                item = &input[..space]
+            }
+        } else {
+            item = &input[..space]
+        }
+        Some((
+            is_tag as usize + item.len() + tag_len,
+            Box::new(ItemPredicate {
+                predicate_type: match is_tag {
+                    true => ItemPredicateType::Tag(item.try_into().ok()?),
+                    false => ItemPredicateType::Item(item.try_into().ok()?),
+                },
+                tag: Tag(tag.unwrap_or_default()),
+            }),
+        ))
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:item_predicate"
+    }
+}
+
+#[derive(Debug)]
+pub struct ItemPredicate {
+    pub predicate_type: ItemPredicateType,
+    pub tag: Tag,
+}
+
+#[derive(Debug)]
+pub enum ItemPredicateType {
+    /// item tag like #minecraft:boats
+    Tag(ResourceLocation),
+    /// itam id like minecraft:stone
+    Item(ResourceLocation),
+}
+
+#[derive(Debug)]
+pub struct ResourceLocation(String, String);
+
+impl ResourceLocation {
+    pub fn new(namespace: String, value: String) -> ResourceLocation {
+        ResourceLocation(namespace, value)
+    }
+    
+    pub fn namespace(&self) -> &str {
+        &self.0
+    }
+    
+    pub fn value(&self) -> &str {
+        &self.1
+    }
+}
+
+impl TryFrom<&str> for ResourceLocation {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let s = value.split(':').collect::<Vec<_>>();
+        match s.len() {
+            1 => Ok(ResourceLocation::new(
+                "minecraft".to_string(),
+                s[0].to_string(),
+            )),
+            2 => Ok(ResourceLocation::new(s[0].to_string(), s[1].to_string())),
+            _ => bail!("Resource location must not contain additional `:` characters"),
         }
     }
 }
