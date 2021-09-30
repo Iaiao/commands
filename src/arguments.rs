@@ -110,7 +110,7 @@ macro_rules! impl_integer_argument {
                 match self.max {
                     Bound::Unbounded => (),
                     Bound::Included(x) | Bound::Excluded(x) => {
-                        flags |= 1 << 0;
+                        flags |= 1 << 1;
                         data.extend(&x.to_be_bytes());
                     }
                 }
