@@ -295,8 +295,8 @@ impl ArgumentParser for EntityArgument {
             something => {
                 let something = something.split_whitespace().next()?;
                 let selector = Uuid::from_str(something)
-                    .map(|uuid| EntitySelector::Uuid(uuid))
-                    .unwrap_or(EntitySelector::Name(something.to_owned()));
+                    .map(EntitySelector::Uuid)
+                    .unwrap_or_else(|_| EntitySelector::Name(something.to_owned()));
                 return if self.0.only_players && matches!(selector, EntitySelector::Uuid(_)) {
                     None
                 } else {

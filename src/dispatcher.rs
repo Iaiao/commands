@@ -101,7 +101,9 @@ impl<T> CommandDispatcher<T> {
                         CommandNode::Root { .. } => panic!("Found root node in find_command"),
                         CommandNode::Literal { name, execute, .. } => {
                             if execute.is_some() && command == name {
-                                return self.executors.get(execute.unwrap()).unwrap()(args, context);
+                                return self.executors.get(execute.unwrap()).unwrap()(
+                                    args, context,
+                                );
                             } else {
                                 command = &command[name.len() + 1..];
                             }
