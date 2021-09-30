@@ -100,8 +100,8 @@ impl<T> CommandDispatcher<T> {
                     match node {
                         CommandNode::Root { .. } => panic!("Found root node in find_command"),
                         CommandNode::Literal { name, execute, .. } => {
-                            if let Some(execute) = execute {
-                                return self.executors.get(*execute).unwrap()(args, context);
+                            if execute.is_some() && command == name {
+                                return self.executors.get(execute.unwrap()).unwrap()(args, context);
                             } else {
                                 command = &command[name.len() + 1..];
                             }
