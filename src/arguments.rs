@@ -1,11 +1,9 @@
 use std::any::Any;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
 use std::marker::PhantomData;
 use std::ops::{Bound, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeToInclusive};
-use std::prelude::rust_2021::TryFrom;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail};
@@ -2126,8 +2124,8 @@ impl ArgumentParser for ItemPredicateArgument {
             is_tag as usize + item.len() + tag_len,
             Box::new(ItemPredicate {
                 predicate_type: match is_tag {
-                    true => ItemPredicateType::Tag(item.try_into().ok()?),
-                    false => ItemPredicateType::Item(item.try_into().ok()?),
+                    true => ItemPredicateType::Tag(item.parse().ok()?),
+                    false => ItemPredicateType::Item(item.parse().ok()?),
                 },
                 tag: Tag(tag.unwrap_or_default()),
             }),
@@ -2164,20 +2162,20 @@ impl ResourceLocation {
     pub fn new(namespace: String, value: String) -> ResourceLocation {
         ResourceLocation(namespace, value)
     }
-    
+
     pub fn namespace(&self) -> &str {
         &self.0
     }
-    
+
     pub fn value(&self) -> &str {
         &self.1
     }
 }
 
-impl TryFrom<&str> for ResourceLocation {
-    type Error = anyhow::Error;
+impl FromStr for ResourceLocation {
+    type Err = anyhow::Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let s = value.split(':').collect::<Vec<_>>();
         match s.len() {
             1 => Ok(ResourceLocation::new(
@@ -2187,5 +2185,11 @@ impl TryFrom<&str> for ResourceLocation {
             2 => Ok(ResourceLocation::new(s[0].to_string(), s[1].to_string())),
             _ => bail!("Resource location must not contain additional `:` characters"),
         }
+    }
+}
+
+impl Display for ResourceLocation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{}:{}", self.0, self.1))
     }
 }
