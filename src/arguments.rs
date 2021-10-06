@@ -159,6 +159,7 @@ impl ArgumentParser for StringArgument {
         match self.0 {
             StringProperties::SingleWord => input
                 .find(' ')
+                .or(Some(input.len()))
                 .map(|i| (i, Box::new(input[..i].to_string()) as Box<dyn Any>)),
             StringProperties::QuotablePhrase => {
                 if input.starts_with('"') {
