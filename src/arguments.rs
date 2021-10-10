@@ -2252,11 +2252,11 @@ impl ArgumentParser for MessageArgument {
     }
 
     fn get_properties(&self) -> &dyn ParserProperties {
-        todo!()
+        &()
     }
 
     fn get_identifier(&self) -> &'static str {
-        todo!()
+        "minecraft:message"
     }
 }
 
@@ -2266,7 +2266,7 @@ pub struct Message(Vec<String>, Vec<Vec<EntitySelectorPredicate>>);
 impl Message {
     pub fn to_string(
         &self,
-        to_string: Box<dyn Fn(Vec<EntitySelectorPredicate>) -> Vec<String>>,
+        to_string: impl Fn(Vec<EntitySelectorPredicate>) -> Vec<String>,
     ) -> String {
         let mut s = String::new();
         let mut i = 0;
