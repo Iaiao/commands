@@ -159,7 +159,7 @@ impl ArgumentParser for StringArgument {
         match self.0 {
             StringProperties::SingleWord => input
                 .find(' ')
-                .or(Some(input.len()))
+                .or_else(|| Some(input.len()))
                 .map(|i| (i, Box::new(input[..i].to_string()) as Box<dyn Any>)),
             StringProperties::QuotablePhrase => {
                 if input.starts_with('"') {
@@ -2152,7 +2152,7 @@ pub struct ItemPredicate {
 pub enum ItemPredicateType {
     /// item tag like #minecraft:boats
     Tag(ResourceLocation),
-    /// itam id like minecraft:stone
+    /// item id like minecraft:stone
     Item(ResourceLocation),
 }
 
@@ -2209,5 +2209,79 @@ impl FromStr for ResourceLocation {
 impl Display for ResourceLocation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(&format!("{}:{}", self.0, self.1))
+    }
+}
+
+#[derive(Debug)]
+pub struct MessageArgument;
+
+impl ArgumentParser for MessageArgument {
+    fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+        macro_rules! find {
+            ($haystack: expr, $( $pattern: literal )|+) => {
+                {
+                    let haystack = $haystack;
+                    None
+                    $(
+                        .or_else(|| haystack.find($pattern))
+                    )+
+                }
+            };
+        }
+
+        let mut strings = Vec::new();
+        let mut selectors = Vec::new();
+        let mut i = 0;
+        loop {
+            if let Some(n) = find!(&input[i..], "@a" | "@p" | "@r" | "@s" | "@e") {
+                strings.push(input[..n].to_owned());
+                i += n;
+                let (len, selector) = EntityArgument::ENTITIES.parse(&input[n..])?;
+                i += len;
+                let selector = selector.downcast::<EntitySelector>().unwrap();
+                match *selector {
+                    EntitySelector::Selector(s) => selectors.push(s),
+                    _ => unreachable!(),
+                }
+            } else {
+                strings.push(input[i..].to_owned());
+                break;
+            }
+        }
+        Some((input.len(), Box::new(Message(strings, selectors))))
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        todo!()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub struct Message(Vec<String>, Vec<Vec<EntitySelectorPredicate>>);
+
+impl Message {
+    pub fn to_string(
+        &self,
+        to_string: Box<dyn Fn(Vec<EntitySelectorPredicate>) -> Vec<String>>,
+    ) -> String {
+        let mut s = String::new();
+        let mut i = 0;
+        loop {
+            if self.0.len() > i {
+                s += &self.0[i];
+            }
+            if self.1.len() > i {
+                // TODO make comma gray
+                s += &to_string(self.1[i].clone()).join(", ");
+                i += 1;
+            } else {
+                break;
+            }
+        }
+        s
     }
 }
