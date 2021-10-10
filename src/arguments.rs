@@ -2250,7 +2250,7 @@ impl ArgumentParser for MessageArgument {
         let mut i = 0;
         loop {
             if let Some(n) = find!(&input[i..], "@a" | "@p" | "@r" | "@s" | "@e") {
-                strings.push(input[..i + n].to_owned());
+                strings.push(input[i..i + n].to_owned());
                 i += n;
                 let (len, selector) = EntityArgument::ENTITIES.parse(&input[i..], true)?;
                 i += len;
