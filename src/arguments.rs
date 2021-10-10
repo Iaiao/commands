@@ -277,7 +277,7 @@ impl ArgumentParser for EntityArgument {
 }
 
 impl EntityArgument {
-    pub fn parse(&self, input: &str, allow_trailing: bool) -> Option<(usize, EntitySelector)> {
+    pub fn parse(&self, mut input: &str, allow_trailing: bool) -> Option<(usize, EntitySelector)> {
         let mut requirements = Vec::new();
         match input.split('[').next().unwrap() {
             s if s.len() < 2 => {
@@ -327,15 +327,14 @@ impl EntityArgument {
                 };
             }
         };
-        let i = if input.contains('[') {
-            let start = input.find('[').unwrap(); // always 2 for now
+        input = &input[2..];
+        let i = if input.starts_with('[') {
             let (predicates, left) =
-                entity_selector_serde::from_str::<Vec<EntitySelectorPredicate>>(&input[start..])
-                    .ok()?;
+                entity_selector_serde::from_str::<Vec<EntitySelectorPredicate>>(input).ok()?;
             requirements.extend(predicates);
             input.len() - left.len()
         } else {
-            2
+            0
         };
         let mut only_allows_players = false;
         let mut single = false;
@@ -359,7 +358,7 @@ impl EntityArgument {
         } else if !allow_trailing && input.len() != i && input.chars().nth(i).unwrap() != ' ' {
             None
         } else {
-            Some((i, EntitySelector::Selector(requirements)))
+            Some((i + 2, EntitySelector::Selector(requirements)))
         }
     }
 }
