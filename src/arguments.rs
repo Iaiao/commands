@@ -300,6 +300,11 @@ impl ArgumentParser for EntityArgument {
                     .unwrap_or_else(|_| EntitySelector::Name(something.to_owned()));
                 return if self.0.only_players && matches!(selector, EntitySelector::Uuid(_)) {
                     None
+                } else if matches!(&selector, EntitySelector::Name(name) if name.len() > 16
+                    || name.len() < 2
+                    || !name.chars().all(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')))
+                {
+                    None
                 } else {
                     Some((something.len(), Box::new(selector)))
                 };
