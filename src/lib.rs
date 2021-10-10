@@ -92,7 +92,7 @@ mod tests {
         });
 
         assert!(dispatcher.execute_command(
-            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..-10,tag=!{foo: bar}] #boats{foo: bar} abc @a def"#,
+            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..-10,tag=!{foo: bar}] #boats{foo: bar} abc @a@e[type=hoglin]@s def"#,
             ()
         ));
     }

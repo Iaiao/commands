@@ -264,31 +264,31 @@ impl EntityArgument {
 impl ArgumentParser for EntityArgument {
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
         let mut requirements = Vec::new();
-        match input.split(&['[', ' '][..]).next().unwrap() {
-            "@p" => {
+        match input.split('[').next().unwrap() {
+            s if &s[..2] == "@p" => {
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Nearest,
                 ));
                 requirements.push(EntitySelectorPredicate::Limit(1));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
-            "@r" => {
+            s if &s[..2] == "@r" => {
                 requirements.push(EntitySelectorPredicate::Sort(EntitySelectorSorting::Random));
                 requirements.push(EntitySelectorPredicate::Limit(1));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
-            "@a" => {
+            s if &s[..2] == "@a" => {
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Arbitrary,
                 ));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
             }
-            "@e" => {
+            s if &s[..2] == "@e" => {
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Arbitrary,
                 ));
             }
-            "@s" => {
+            s if &s[..2] == "@s" => {
                 requirements.push(EntitySelectorPredicate::Sender);
                 requirements.push(EntitySelectorPredicate::Limit(1));
                 requirements.push(EntitySelectorPredicate::Type(EntityType::Player));
@@ -2239,9 +2239,9 @@ impl ArgumentParser for MessageArgument {
         let mut i = 0;
         loop {
             if let Some(n) = find!(&input[i..], "@a" | "@p" | "@r" | "@s" | "@e") {
-                strings.push(input[..n].to_owned());
+                strings.push(input[..i + n].to_owned());
                 i += n;
-                let (len, selector) = EntityArgument::ENTITIES.parse(&input[n..])?;
+                let (len, selector) = EntityArgument::ENTITIES.parse(&input[i..])?;
                 i += len;
                 let selector = selector.downcast::<EntitySelector>().unwrap();
                 match *selector {
