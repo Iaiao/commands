@@ -263,8 +263,26 @@ impl EntityArgument {
 
 impl ArgumentParser for EntityArgument {
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+        self.parse(input, false)
+            .map(|(i, s)| (i, Box::new(s) as Box<dyn Any>))
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &self.0
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:entity"
+    }
+}
+
+impl EntityArgument {
+    pub fn parse(&self, input: &str, allow_trailing: bool) -> Option<(usize, EntitySelector)> {
         let mut requirements = Vec::new();
         match input.split('[').next().unwrap() {
+            s if s.len() < 2 => {
+                return None;
+            }
             s if &s[..2] == "@p" => {
                 requirements.push(EntitySelectorPredicate::Sort(
                     EntitySelectorSorting::Nearest,
@@ -298,15 +316,14 @@ impl ArgumentParser for EntityArgument {
                 let selector = Uuid::from_str(something)
                     .map(EntitySelector::Uuid)
                     .unwrap_or_else(|_| EntitySelector::Name(something.to_owned()));
-                return if self.0.only_players && matches!(selector, EntitySelector::Uuid(_)) {
-                    None
-                } else if matches!(&selector, EntitySelector::Name(name) if name.len() > 16
-                    || name.len() < 2
-                    || !name.chars().all(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')))
+                return if (self.0.only_players && matches!(selector, EntitySelector::Uuid(_)))
+                    || (matches!(&selector, EntitySelector::Name(name) if name.len() > 16
+                        || name.len() < 2
+                        || !name.chars().all(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_'))))
                 {
                     None
                 } else {
-                    Some((something.len(), Box::new(selector)))
+                    Some((something.len(), selector))
                 };
             }
         };
@@ -339,17 +356,11 @@ impl ArgumentParser for EntityArgument {
             None
         } else if self.0.only_players && !only_allows_players {
             None
+        } else if !allow_trailing && input.len() != i && input.chars().nth(i).unwrap() != ' ' {
+            None
         } else {
-            Some((i, Box::new(EntitySelector::Selector(requirements))))
+            Some((i, EntitySelector::Selector(requirements)))
         }
-    }
-
-    fn get_properties(&self) -> &dyn ParserProperties {
-        &self.0
-    }
-
-    fn get_identifier(&self) -> &'static str {
-        "minecraft:entity"
     }
 }
 
@@ -2241,10 +2252,9 @@ impl ArgumentParser for MessageArgument {
             if let Some(n) = find!(&input[i..], "@a" | "@p" | "@r" | "@s" | "@e") {
                 strings.push(input[..i + n].to_owned());
                 i += n;
-                let (len, selector) = EntityArgument::ENTITIES.parse(&input[i..])?;
+                let (len, selector) = EntityArgument::ENTITIES.parse(&input[i..], true)?;
                 i += len;
-                let selector = selector.downcast::<EntitySelector>().unwrap();
-                match *selector {
+                match selector {
                     EntitySelector::Selector(s) => selectors.push(s),
                     _ => unreachable!(),
                 }
