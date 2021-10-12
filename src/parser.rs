@@ -4,7 +4,7 @@ use std::io::Write;
 
 /// Argument parser
 pub trait ArgumentParser: Debug {
-    /// Parse input string to [`Self::Output`]
+    /// Parse input string
     /// Return Some(amount of chars to skip, output) if found, None otherwise
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)>;
 

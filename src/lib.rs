@@ -1,5 +1,6 @@
+mod args;
 pub mod arguments;
-pub mod command;
+pub mod create_command;
 pub mod dispatcher;
 pub mod node;
 pub mod parser;
@@ -20,7 +21,7 @@ mod tests {
         dispatcher
             .create_command("test 1")
             .unwrap()
-            .executes(|_args, _context| true);
+            .executes(|_context| true);
 
         let result = dispatcher.find_command("test 1");
         assert_eq!(result, Some(vec![1, 2]));
@@ -38,9 +39,7 @@ mod tests {
                 DoubleArgument::default(),
                 CompletionType::custom("none"),
             )
-            .executes(|args, _context| {
-                *args.into_iter().next().unwrap().downcast::<f64>().unwrap() == 1.2
-            });
+            .executes(|_context, num: f64| num == 1.2);
 
         let result = dispatcher.find_command("test 1.2");
         assert_eq!(result, Some(vec![1, 2]));
@@ -59,13 +58,10 @@ mod tests {
                     DoubleArgument::default(),
                     CompletionType::custom("none"),
                 )
-                .executes(|args, _context| {
-                    *args.into_iter().next().unwrap().downcast::<f64>().unwrap() == 1.2
-                })
+                .executes(|_context, num: f64| num == 1.2);
             })
             .with(|cmd| {
-                cmd.subcommand("subcommand")
-                    .executes(|_args, _context| true)
+                cmd.subcommand("subcommand").executes(|_context| true);
             });
 
         let result = dispatcher.find_command("test 1.2");
@@ -78,53 +74,28 @@ mod tests {
     }
 
     #[test]
-    fn test_macro() {
-        let dispatcher = &mut CommandDispatcher::<()>::new();
-        crate::command!(dispatcher,
-                "test",
-                "x": IntegerArgument::new(0..=5), "none" => _x: i32,
-                "y": DoubleArgument::new(0.0..3.0), "none" => _y: f64,
-                "entities": EntityArgument::ENTITIES, "none" => _entities: EntitySelector,
-                "item": ItemPredicateArgument, "none" => _item_predicate: ItemPredicate,
-                "message": MessageArgument, "none" => _s: Message,
-                _context {
-            Ok(())
-        });
-
-        assert!(dispatcher.execute_command(
-            r#"test 3 2.5 @a[name="!a b c",type=hoglin,distance=..-10,tag=!{foo: bar}] #boats{foo: bar} abc @a@e[type=hoglin]@s def"#,
-            ()
-        ));
-    }
-
-    #[test]
     fn test_packet() {
-        let dispatcher = &mut CommandDispatcher::<()>::new();
-        crate::command!(dispatcher,
-                "test",
-                "x": IntegerArgument::new(0..=5), "none" => _x: i32,
-                "y": DoubleArgument::new(0.0..3.0), "none" => _y: f64,
-                "entities": EntityArgument::default(), "entity" => _entities: EntitySelector,
-                "string": StringArgument::new(StringProperties::GreedyPhrase), "none" => _s: String,
-                _context {
-            Ok(())
-        });
+        let mut dispatcher = CommandDispatcher::<()>::new();
+        dispatcher
+            .create_command("test")
+            .unwrap()
+            .with(|cmd| {
+                cmd.argument::<f64, _>(
+                    "arg",
+                    DoubleArgument::default(),
+                    CompletionType::custom("none"),
+                );
+            })
+            .with(|cmd| {
+                cmd.subcommand("subcommand").executes(|_context| true);
+            });
         assert_eq!(
             dispatcher.packet().unwrap(),
             vec![
-                6, 0, 1, 1, 1, 1, 2, 4, 116, 101, 115, 116, 18, 1, 3, 1, 120, 17, 98, 114, 105,
-                103, 97, 100, 105, 101, 114, 58, 105, 110, 116, 101, 103, 101, 114, 3, 0, 0, 0, 0,
-                0, 0, 0, 5, 20, 109, 105, 110, 101, 99, 114, 97, 102, 116, 58, 97, 115, 107, 95,
-                115, 101, 114, 118, 101, 114, 18, 1, 4, 1, 121, 16, 98, 114, 105, 103, 97, 100,
-                105, 101, 114, 58, 100, 111, 117, 98, 108, 101, 3, 0, 0, 0, 0, 0, 0, 0, 0, 64, 8,
-                0, 0, 0, 0, 0, 0, 20, 109, 105, 110, 101, 99, 114, 97, 102, 116, 58, 97, 115, 107,
-                95, 115, 101, 114, 118, 101, 114, 18, 1, 5, 8, 101, 110, 116, 105, 116, 105, 101,
-                115, 16, 109, 105, 110, 101, 99, 114, 97, 102, 116, 58, 101, 110, 116, 105, 116,
-                121, 0, 20, 109, 105, 110, 101, 99, 114, 97, 102, 116, 58, 97, 115, 107, 95, 115,
-                101, 114, 118, 101, 114, 22, 0, 6, 115, 116, 114, 105, 110, 103, 16, 98, 114, 105,
-                103, 97, 100, 105, 101, 114, 58, 115, 116, 114, 105, 110, 103, 2, 20, 109, 105,
+                4, 0, 1, 1, 1, 2, 2, 3, 4, 116, 101, 115, 116, 18, 0, 3, 97, 114, 103, 16, 98, 114,
+                105, 103, 97, 100, 105, 101, 114, 58, 100, 111, 117, 98, 108, 101, 0, 20, 109, 105,
                 110, 101, 99, 114, 97, 102, 116, 58, 97, 115, 107, 95, 115, 101, 114, 118, 101,
-                114, 0
+                114, 5, 0, 10, 115, 117, 98, 99, 111, 109, 109, 97, 110, 100, 0
             ]
         )
     }
@@ -155,22 +126,16 @@ mod tests {
         }
 
         let dispatcher = &mut CommandDispatcher::<()>::new();
-        crate::command!(dispatcher,
-            "test",
-            _context {
-                Ok(())
-        });
-        crate::command!(dispatcher,
-            "test2",
-            "gamemode": GamemodeArgument, "gamemode" => _gamemode: Gamemode,
-            _context {
-                Ok(())
-        });
-        crate::command!(dispatcher,
-            "3test2",
-            _context {
-                Ok(())
-        });
+        dispatcher.create_command("test").unwrap();
+        dispatcher
+            .create_command("test2")
+            .unwrap()
+            .argument::<Gamemode, _>(
+                "gamemode",
+                GamemodeArgument,
+                CompletionType::custom("gamemode"),
+            );
+        dispatcher.create_command("3test2").unwrap();
 
         assert_eq!(
             dispatcher.tab_complete(r#"te"#, ()),
@@ -225,12 +190,14 @@ mod tests {
             ])
         );
 
-        crate::command!(dispatcher,
-            "testspaces",
-            "s": StringArgument::new(StringProperties::GreedyPhrase), "none" => _s: String,
-            _context {
-                Ok(())
-        });
+        dispatcher
+            .create_command("testspaces")
+            .unwrap()
+            .argument::<String, _>(
+                "s",
+                StringArgument::new(StringProperties::GreedyPhrase),
+                CompletionType::custom("none"),
+            );
 
         assert_eq!(dispatcher.tab_complete(r#"testspaces a "#, ()), None);
         assert_eq!(dispatcher.tab_complete(r#"testspaces a b"#, ()), None);

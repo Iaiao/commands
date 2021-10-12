@@ -5,8 +5,8 @@ use std::fmt::{Debug, Formatter};
 use anyhow::{anyhow, bail};
 use slab::Slab;
 
+use crate::create_command::CreateCommand;
 use crate::node::{CommandNode, CompletionType};
-use crate::parser::ArgumentParser;
 use crate::varint::write_varint;
 
 pub type Args = Vec<Box<dyn Any>>;
@@ -70,7 +70,7 @@ impl<T> CommandDispatcher<T> {
             .find_suggestions(prompt, &mut context, self)
     }
 
-    pub fn create_command(&mut self, name: &str) -> anyhow::Result<CreateCommand<T>> {
+    pub fn create_command(&mut self, name: &str) -> anyhow::Result<CreateCommand<T, ()>> {
         if name.is_empty() {
             bail!("Command name is empty")
         } else {
@@ -84,10 +84,7 @@ impl<T> CommandDispatcher<T> {
                     parent: node,
                 })?;
             }
-            Ok(CreateCommand {
-                current_node: node,
-                dispatcher: self,
-            })
+            Ok(CreateCommand::new(node, self))
         }
     }
 
@@ -234,7 +231,7 @@ impl<T> CommandDispatcher<T> {
         self.executors.insert(Box::new(executor))
     }
 
-    fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
+    pub(crate) fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
         let parent = child.parent().unwrap();
         let i = self.nodes.insert(child);
         let parent = self
@@ -260,63 +257,5 @@ impl<T> CommandDispatcher<T> {
         self.nodes
             .get(node)?
             .find_suggestions(command, context, self)
-    }
-}
-
-pub struct CreateCommand<'a, T> {
-    current_node: usize,
-    dispatcher: &'a mut CommandDispatcher<T>,
-}
-
-impl<'a, T> CreateCommand<'a, T> {
-    pub fn with(&mut self, f: impl FnOnce(&mut Self)) -> &mut Self {
-        let node = self.current_node;
-        f(self);
-        self.current_node = node;
-        self
-    }
-
-    pub fn subcommand(&mut self, name: &str) -> &mut Self {
-        let i = self
-            .dispatcher
-            .insert_child(CommandNode::Literal {
-                execute: None,
-                name: name.to_owned(),
-                children: vec![],
-                parent: self.current_node,
-            })
-            .unwrap();
-        self.current_node = i;
-        self
-    }
-
-    pub fn argument(
-        &mut self,
-        name: &str,
-        parser: impl ArgumentParser + 'static,
-        completion_type: CompletionType,
-    ) -> &mut Self {
-        let i = self
-            .dispatcher
-            .insert_child(CommandNode::Argument {
-                execute: None,
-                name: name.to_owned(),
-                suggestions_type: completion_type,
-                parser: Box::new(parser),
-                children: vec![],
-                parent: self.current_node,
-            })
-            .unwrap();
-        self.current_node = i;
-        self
-    }
-
-    pub fn executes(&mut self, f: impl Fn(Args, T) -> bool + 'static) {
-        let f = self.dispatcher.executors.insert(Box::new(f));
-        self.dispatcher
-            .nodes
-            .get_mut(self.current_node)
-            .unwrap()
-            .executes(f)
     }
 }
