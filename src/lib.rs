@@ -33,10 +33,10 @@ mod tests {
         dispatcher
             .create_command("test")
             .unwrap()
-            .with_argument(
+            .argument(
                 "arg",
-                Box::new(DoubleArgument::default()),
-                CompletionType::Custom("none".to_string()),
+                DoubleArgument::default(),
+                CompletionType::custom("none"),
             )
             .executes(|args, _context| {
                 *args.into_iter().next().unwrap().downcast::<f64>().unwrap() == 1.2
@@ -54,17 +54,17 @@ mod tests {
             .create_command("test")
             .unwrap()
             .with(|cmd| {
-                cmd.with_argument(
+                cmd.argument(
                     "arg",
-                    Box::new(DoubleArgument::default()),
-                    CompletionType::Custom("none".to_string()),
+                    DoubleArgument::default(),
+                    CompletionType::custom("none"),
                 )
                 .executes(|args, _context| {
                     *args.into_iter().next().unwrap().downcast::<f64>().unwrap() == 1.2
                 })
             })
             .with(|cmd| {
-                cmd.with_subcommand("subcommand")
+                cmd.subcommand("subcommand")
                     .executes(|_args, _context| true)
             });
 

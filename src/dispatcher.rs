@@ -230,8 +230,8 @@ impl<T> CommandDispatcher<T> {
         }
     }
 
-    pub fn add_executor(&mut self, executor: Box<dyn Fn(Args, T) -> bool>) -> usize {
-        self.executors.insert(executor)
+    pub fn add_executor(&mut self, executor: impl Fn(Args, T) -> bool + 'static) -> usize {
+        self.executors.insert(Box::new(executor))
     }
 
     fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
@@ -276,7 +276,7 @@ impl<'a, T> CreateCommand<'a, T> {
         self
     }
 
-    pub fn with_subcommand(&mut self, name: &str) -> &mut Self {
+    pub fn subcommand(&mut self, name: &str) -> &mut Self {
         let i = self
             .dispatcher
             .insert_child(CommandNode::Literal {
@@ -290,10 +290,10 @@ impl<'a, T> CreateCommand<'a, T> {
         self
     }
 
-    pub fn with_argument(
+    pub fn argument(
         &mut self,
         name: &str,
-        parser: Box<dyn ArgumentParser>,
+        parser: impl ArgumentParser + 'static,
         completion_type: CompletionType,
     ) -> &mut Self {
         let i = self
@@ -302,7 +302,7 @@ impl<'a, T> CreateCommand<'a, T> {
                 execute: None,
                 name: name.to_owned(),
                 suggestions_type: completion_type,
-                parser,
+                parser: Box::new(parser),
                 children: vec![],
                 parent: self.current_node,
             })

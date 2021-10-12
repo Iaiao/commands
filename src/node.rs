@@ -287,6 +287,10 @@ pub enum CompletionType {
 }
 
 impl CompletionType {
+    pub fn custom(s: impl Into<String>) -> CompletionType {
+        CompletionType::Custom(s.into())
+    }
+
     fn as_send_str(&self) -> &'static str {
         match self {
             CompletionType::Custom(_) => "minecraft:ask_server",
