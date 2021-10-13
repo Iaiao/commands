@@ -1,4 +1,4 @@
-mod args;
+pub mod args;
 pub mod arguments;
 pub mod create_command;
 pub mod dispatcher;
