@@ -12,7 +12,6 @@ mod tests {
 
     use crate::arguments::*;
     use crate::dispatcher::CommandDispatcher;
-    use crate::node::CompletionType;
     use crate::parser::{ArgumentParser, ParserProperties};
 
     #[test]
@@ -34,11 +33,7 @@ mod tests {
         dispatcher
             .create_command("test")
             .unwrap()
-            .argument(
-                "arg",
-                DoubleArgument::default(),
-                CompletionType::custom("none"),
-            )
+            .argument("arg", DoubleArgument::default(), "none")
             .executes(|_context, num: f64| num == 1.2);
 
         let result = dispatcher.find_command("test 1.2");
@@ -53,12 +48,8 @@ mod tests {
             .create_command("test")
             .unwrap()
             .with(|cmd| {
-                cmd.argument(
-                    "arg",
-                    DoubleArgument::default(),
-                    CompletionType::custom("none"),
-                )
-                .executes(|_context, num: f64| num == 1.2);
+                cmd.argument("arg", DoubleArgument::default(), "none")
+                    .executes(|_context, num: f64| num == 1.2);
             })
             .with(|cmd| {
                 cmd.subcommand("subcommand").executes(|_context| true);
@@ -80,11 +71,7 @@ mod tests {
             .create_command("test")
             .unwrap()
             .with(|cmd| {
-                cmd.argument::<f64, _>(
-                    "arg",
-                    DoubleArgument::default(),
-                    CompletionType::custom("none"),
-                );
+                cmd.argument::<f64, _, _>("arg", DoubleArgument::default(), "none");
             })
             .with(|cmd| {
                 cmd.subcommand("subcommand").executes(|_context| true);
@@ -130,11 +117,7 @@ mod tests {
         dispatcher
             .create_command("test2")
             .unwrap()
-            .argument::<Gamemode, _>(
-                "gamemode",
-                GamemodeArgument,
-                CompletionType::custom("gamemode"),
-            );
+            .argument::<Gamemode, _, _>("gamemode", GamemodeArgument, "gamemode");
         dispatcher.create_command("3test2").unwrap();
 
         assert_eq!(
@@ -193,11 +176,7 @@ mod tests {
         dispatcher
             .create_command("testspaces")
             .unwrap()
-            .argument::<String, _>(
-                "s",
-                StringArgument::GREEDY_PHRASE,
-                CompletionType::custom("none"),
-            );
+            .argument::<String, _, _>("s", StringArgument::GREEDY_PHRASE, "none");
 
         assert_eq!(dispatcher.tab_complete(r#"testspaces a "#, ()), None);
         assert_eq!(dispatcher.tab_complete(r#"testspaces a b"#, ()), None);

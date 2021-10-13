@@ -48,11 +48,11 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         CreateCommand::new(i, self.dispatcher)
     }
 
-    pub fn argument<Arg, Parser: ArgumentParser + 'static>(
+    pub fn argument<Arg, Parser: ArgumentParser + 'static, Completion: Into<CompletionType>>(
         self,
         name: &str,
         parser: Parser,
-        completion_type: CompletionType,
+        completion_type: Completion,
     ) -> CreateCommand<'a, T, CombinedTuples<A, (Arg,)>>
     where
         <A as Tuple>::HList: Combine<Product<Arg, ()>>,
@@ -62,7 +62,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
             .insert_child(CommandNode::Argument {
                 execute: None,
                 name: name.to_owned(),
-                suggestions_type: completion_type,
+                suggestions_type: completion_type.into(),
                 parser: Box::new(parser),
                 children: vec![],
                 parent: self.current_node,

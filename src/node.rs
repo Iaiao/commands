@@ -301,3 +301,12 @@ impl CompletionType {
         }
     }
 }
+
+impl<T> From<T> for CompletionType
+where
+    T: Into<String>,
+{
+    fn from(s: T) -> Self {
+        CompletionType::custom(s)
+    }
+}

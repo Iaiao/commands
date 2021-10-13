@@ -154,7 +154,7 @@ impl StringArgument {
         StringArgument::new(StringProperties::QuotablePhrase);
     pub const GREEDY_PHRASE: StringArgument = StringArgument::new(StringProperties::GreedyPhrase);
 
-    pub fn new(properties: StringProperties) -> StringArgument {
+    pub const fn new(properties: StringProperties) -> StringArgument {
         StringArgument(properties)
     }
 }
