@@ -20,11 +20,14 @@ mod tests {
         dispatcher
             .create_command("test 1")
             .unwrap()
-            .executes(|_context| true);
+            .executes(|_context| Ok(0));
 
         let result = dispatcher.find_command("test 1");
         assert_eq!(result, Some(vec![1, 2]));
-        assert_eq!(dispatcher.execute_command("test 1", ()), true);
+        assert_eq!(
+            dispatcher.execute_command("test 1", ()).unwrap().unwrap(),
+            0
+        );
     }
 
     #[test]
@@ -34,11 +37,17 @@ mod tests {
             .create_command("test")
             .unwrap()
             .argument("arg", DoubleArgument::default(), "none")
-            .executes(|_context, num: f64| num == 1.2);
+            .executes(|_context, num: f64| {
+                if num == 1.2 {
+                    Ok(0)
+                } else {
+                    Err(anyhow::anyhow!("Not 1.2"))
+                }
+            });
 
         let result = dispatcher.find_command("test 1.2");
         assert_eq!(result, Some(vec![1, 2]));
-        assert!(dispatcher.execute_command("test 1.2", ()));
+        assert!(dispatcher.execute_command("test 1.2", ()).is_some());
     }
 
     #[test]
@@ -49,19 +58,25 @@ mod tests {
             .unwrap()
             .with(|cmd| {
                 cmd.argument("arg", DoubleArgument::default(), "none")
-                    .executes(|_context, num: f64| num == 1.2);
+                    .executes(|_context, num: f64| {
+                        if num == 1.2 {
+                            Ok(0)
+                        } else {
+                            Err(anyhow::anyhow!("Not 1.2"))
+                        }
+                    });
             })
             .with(|cmd| {
-                cmd.subcommand("subcommand").executes(|_context| true);
+                cmd.subcommand("subcommand").executes(|_context| Ok(0));
             });
 
         let result = dispatcher.find_command("test 1.2");
         assert_eq!(result, Some(vec![1, 2]));
-        assert!(dispatcher.execute_command("test 1.2", ()));
+        assert!(dispatcher.execute_command("test 1.2", ()).is_some());
 
         let result = dispatcher.find_command("test subcommand");
         assert_eq!(result, Some(vec![1, 3]));
-        assert!(dispatcher.execute_command("test subcommand", ()));
+        assert!(dispatcher.execute_command("test subcommand", ()).is_some());
     }
 
     #[test]
@@ -74,7 +89,7 @@ mod tests {
                 cmd.argument::<f64, _, _>("arg", DoubleArgument::default(), "none");
             })
             .with(|cmd| {
-                cmd.subcommand("subcommand").executes(|_context| true);
+                cmd.subcommand("subcommand").executes(|_context| Ok(0));
             });
         assert_eq!(
             dispatcher.packet().unwrap(),

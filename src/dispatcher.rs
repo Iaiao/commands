@@ -11,11 +11,12 @@ use crate::varint::write_varint;
 
 pub type Args = Vec<Box<dyn Any>>;
 pub type Completer<T> = Box<dyn Fn(&str, &mut T) -> Vec<(String, Option<String>)>>;
+pub type CommandOutput = anyhow::Result<i32>;
 
 pub struct CommandDispatcher<T> {
     // 0 is always root node
     pub(crate) nodes: Slab<CommandNode>,
-    pub(crate) executors: Slab<Box<dyn Fn(Args, T) -> bool>>,
+    pub(crate) executors: Slab<Box<dyn Fn(Args, T) -> CommandOutput>>,
     pub(crate) tab_completers: HashMap<String, Completer<T>>,
 }
 
@@ -88,7 +89,7 @@ impl<T> CommandDispatcher<T> {
         }
     }
 
-    pub fn execute_command(&self, mut command: &str, context: T) -> bool {
+    pub fn execute_command(&self, mut command: &str, context: T) -> Option<CommandOutput> {
         let cmd = self.find_command(command);
         if let Some(cmd) = cmd {
             let mut args = Vec::new();
@@ -98,9 +99,9 @@ impl<T> CommandDispatcher<T> {
                         CommandNode::Root { .. } => panic!("Found root node in find_command"),
                         CommandNode::Literal { name, execute, .. } => {
                             if execute.is_some() && command == name {
-                                return self.executors.get(execute.unwrap()).unwrap()(
+                                return Some(self.executors.get(execute.unwrap()).unwrap()(
                                     args, context,
-                                );
+                                ));
                             } else {
                                 command = &command[name.len() + 1..];
                             }
@@ -112,26 +113,26 @@ impl<T> CommandDispatcher<T> {
                                 let (i, arg): (usize, Box<dyn Any>) = parse_result;
                                 args.push(arg);
                                 if execute.is_some() && command.len() == i {
-                                    return self.executors.get(execute.unwrap()).unwrap()(
+                                    return Some(self.executors.get(execute.unwrap()).unwrap()(
                                         args, context,
-                                    );
+                                    ));
                                 } else if command.len() == i {
-                                    return false;
+                                    return None;
                                 } else {
                                     command = &command[i + 1..];
                                 }
                             } else {
-                                return false;
+                                return None;
                             }
                         }
                     }
                 } else {
-                    return false;
+                    return None;
                 }
             }
-            false
+            None
         } else {
-            false
+            None
         }
     }
 
@@ -170,7 +171,7 @@ impl<T> CommandDispatcher<T> {
         self,
     ) -> (
         Slab<CommandNode>,
-        Slab<Box<dyn Fn(Args, T) -> bool>>,
+        Slab<Box<dyn Fn(Args, T) -> CommandOutput>>,
         HashMap<String, Completer<T>>,
     ) {
         (self.nodes, self.executors, self.tab_completers)
@@ -227,7 +228,7 @@ impl<T> CommandDispatcher<T> {
         }
     }
 
-    pub fn add_executor(&mut self, executor: impl Fn(Args, T) -> bool + 'static) -> usize {
+    pub fn add_executor(&mut self, executor: impl Fn(Args, T) -> CommandOutput + 'static) -> usize {
         self.executors.insert(Box::new(executor))
     }
 

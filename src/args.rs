@@ -1,5 +1,7 @@
 use crate::dispatcher::Args;
 
+use crate::dispatcher::CommandOutput;
+
 #[derive(Debug)]
 pub struct Product<H, T: HList>(pub(crate) H, pub(crate) T);
 
@@ -38,7 +40,7 @@ pub trait Combine<T: HList> {
 }
 
 pub trait Func<Ctx, Args> {
-    fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, Ctx) -> bool + 'static>;
+    fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, Ctx) -> CommandOutput + 'static>;
 }
 
 impl<T: HList> Combine<T> for () {
@@ -79,9 +81,9 @@ impl Tuple for () {
 
 impl<C, F: 'static> Func<C, ()> for F
 where
-    F: Fn(C) -> bool,
+    F: Fn(C) -> CommandOutput,
 {
-    fn to_fn(self) -> Box<dyn Fn(Args, C) -> bool + 'static> {
+    fn to_fn(self) -> Box<dyn Fn(Args, C) -> CommandOutput + 'static> {
         Box::new(move |_no_args, ctx| self(ctx))
     }
 }
@@ -123,9 +125,9 @@ macro_rules! generics {
 
         impl<F: 'static, C, $type: 'static> Func<C, product_type!($type)> for F
         where
-            F: Fn(C, $type) -> bool,
+            F: Fn(C, $type) -> CommandOutput,
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> bool> {
+            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     self(context,
                         *args.into_iter().next().unwrap().downcast().expect("Couldn't cast an argument"))
@@ -135,9 +137,9 @@ macro_rules! generics {
 
         impl<F: 'static, C, $type: 'static> Func<C, ($type,)> for F
         where
-            F: Fn(C, $type) -> bool,
+            F: Fn(C, $type) -> CommandOutput,
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> bool> {
+            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     self(context,
                         *args.into_iter().next().unwrap().downcast().expect("Couldn't cast an argument"))
@@ -173,9 +175,9 @@ macro_rules! generics {
 
         impl<F: 'static, C, $type1: 'static, $( $type: 'static ),*> Func<C, product_type!($type1, $($type),*)> for F
         where
-            F: Fn(C, $type1, $( $type ),*) -> bool
+            F: Fn(C, $type1, $( $type ),*) -> CommandOutput
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> bool> {
+            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     let mut args = args.into_iter();
                     self(context,
@@ -189,9 +191,9 @@ macro_rules! generics {
 
         impl<F: 'static, C, $type1: 'static, $( $type: 'static ),*> Func<C, ($type1, $($type),*)> for F
         where
-            F: Fn(C, $type1, $( $type ),*) -> bool,
+            F: Fn(C, $type1, $( $type ),*) -> CommandOutput,
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> bool> {
+            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     let mut args = args.into_iter();
                     self(context,
