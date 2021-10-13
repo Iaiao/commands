@@ -91,9 +91,9 @@ macro_rules! product {
     ($H:expr, $($T:expr),*) => { Product($H, product!($($T),*)) };
 }
 
-macro_rules! Product {
+macro_rules! product_type {
     ($H:ty) => { Product<$H, ()> };
-    ($H:ty, $($T:ty),*) => { Product<$H, Product!($($T),*)> };
+    ($H:ty, $($T:ty),*) => { Product<$H, product_type!($($T),*)> };
 }
 
 macro_rules! product_pat {
@@ -103,7 +103,7 @@ macro_rules! product_pat {
 
 macro_rules! generics {
     ($type:ident) => {
-        impl<$type> HList for Product!($type) {
+        impl<$type> HList for product_type!($type) {
             type Tuple = ($type,);
 
             #[inline]
@@ -113,7 +113,7 @@ macro_rules! generics {
         }
 
         impl<$type> Tuple for ($type,) {
-            type HList = Product!($type);
+            type HList = product_type!($type);
             #[inline]
             fn hlist(self) -> Self::HList {
                 product!(self.0)
@@ -121,7 +121,7 @@ macro_rules! generics {
         }
 
 
-        impl<F: 'static, C, $type: 'static> Func<C, Product!($type)> for F
+        impl<F: 'static, C, $type: 'static> Func<C, product_type!($type)> for F
         where
             F: Fn(C, $type) -> bool,
         {
@@ -149,7 +149,7 @@ macro_rules! generics {
     ($type1:ident, $( $type:ident ),*) => {
         generics!($( $type ),*);
 
-        impl<$type1, $( $type ),*> HList for Product!($type1, $($type),*) {
+        impl<$type1, $( $type ),*> HList for product_type!($type1, $($type),*) {
             type Tuple = ($type1, $( $type ),*);
 
             #[inline]
@@ -161,7 +161,7 @@ macro_rules! generics {
         }
 
         impl<$type1, $( $type ),*> Tuple for ($type1, $($type),*) {
-            type HList = Product!($type1, $( $type ),*);
+            type HList = product_type!($type1, $( $type ),*);
 
             #[inline]
             fn hlist(self) -> Self::HList {
@@ -171,7 +171,7 @@ macro_rules! generics {
             }
         }
 
-        impl<F: 'static, C, $type1: 'static, $( $type: 'static ),*> Func<C, Product!($type1, $($type),*)> for F
+        impl<F: 'static, C, $type1: 'static, $( $type: 'static ),*> Func<C, product_type!($type1, $($type),*)> for F
         where
             F: Fn(C, $type1, $( $type ),*) -> bool
         {
