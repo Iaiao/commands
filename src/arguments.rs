@@ -149,6 +149,11 @@ impl Default for StringArgument {
 }
 
 impl StringArgument {
+    pub const SINGLE_WORD: StringArgument = StringArgument::new(StringProperties::SingleWord);
+    pub const QUOTABLE_PHRASE: StringArgument =
+        StringArgument::new(StringProperties::QuotablePhrase);
+    pub const GREEDY_PHRASE: StringArgument = StringArgument::new(StringProperties::GreedyPhrase);
+
     pub fn new(properties: StringProperties) -> StringArgument {
         StringArgument(properties)
     }

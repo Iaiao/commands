@@ -195,7 +195,7 @@ mod tests {
             .unwrap()
             .argument::<String, _>(
                 "s",
-                StringArgument::new(StringProperties::GreedyPhrase),
+                StringArgument::GREEDY_PHRASE,
                 CompletionType::custom("none"),
             );
 
