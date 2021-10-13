@@ -71,7 +71,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         CreateCommand::new(i, self.dispatcher)
     }
 
-    pub fn executes(&'a mut self, f: impl Func<T, A> + 'static) -> Self {
+    pub fn executes(self, f: impl Func<T, A> + 'static) -> Self {
         let f = self.dispatcher.executors.insert(f.to_fn());
         self.dispatcher
             .nodes
