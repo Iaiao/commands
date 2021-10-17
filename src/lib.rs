@@ -147,8 +147,8 @@ mod tests {
 
         dispatcher.register_tab_completion("gamemode", |prompt, _| {
             (
-                prompt.rfind(' ').unwrap_or(0),
-                prompt.rsplit(' ').next().unwrap().len(),
+                0,
+                prompt.len(),
                 vec![
                     (
                         "survival".to_string(),

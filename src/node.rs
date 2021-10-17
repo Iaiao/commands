@@ -135,8 +135,8 @@ impl CommandNode {
             CommandNode::Literal { children, name, .. } => {
                 if name.starts_with(prompt) {
                     Some((
-                        prompt.rfind(' ').unwrap_or(0),
-                        prompt.rsplit(' ').next().unwrap().len(),
+                        0,
+                        prompt.len(),
                         vec![(name.to_string(), None)],
                     ))
                 } else if prompt.starts_with(&format!("{} ", name)) {
