@@ -8,8 +8,6 @@ mod varint;
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
-
     use crate::arguments::*;
     use crate::dispatcher::CommandDispatcher;
     use crate::parser::{ArgumentParser, ParserProperties};
@@ -37,7 +35,7 @@ mod tests {
             .create_command("test")
             .unwrap()
             .argument("arg", DoubleArgument::default(), "none")
-            .executes(|_context, num: f64| {
+            .executes(|_context, num| {
                 if num == 1.2 {
                     Ok(0)
                 } else {
@@ -58,7 +56,7 @@ mod tests {
             .unwrap()
             .with(|cmd| {
                 cmd.argument("arg", DoubleArgument::default(), "none")
-                    .executes(|_context, num: f64| {
+                    .executes(|_context, num| {
                         if num == 1.2 {
                             Ok(0)
                         } else {
@@ -86,7 +84,7 @@ mod tests {
             .create_command("test")
             .unwrap()
             .with(|cmd| {
-                cmd.argument::<f64, _, _>("arg", DoubleArgument::default(), "none");
+                cmd.argument("arg", DoubleArgument::default(), "none");
             })
             .with(|cmd| {
                 cmd.subcommand("subcommand").executes(|_context| Ok(0));
@@ -108,12 +106,14 @@ mod tests {
         pub struct GamemodeArgument;
 
         impl ArgumentParser for GamemodeArgument {
-            fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+            type Output = Gamemode;
+
+            fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
                 match input.split(' ').next().unwrap() {
-                    "survival" => Some(("survival".len(), Box::new(Gamemode::Survival))),
-                    "creative" => Some(("creative".len(), Box::new(Gamemode::Creative))),
-                    "adventure" => Some(("adventure".len(), Box::new(Gamemode::Adventure))),
-                    "spectator" => Some(("spectator".len(), Box::new(Gamemode::Spectator))),
+                    "survival" => Some(("survival".len(), Gamemode::Survival)),
+                    "creative" => Some(("creative".len(), Gamemode::Creative)),
+                    "adventure" => Some(("adventure".len(), Gamemode::Adventure)),
+                    "spectator" => Some(("spectator".len(), Gamemode::Spectator)),
                     _ => None,
                 }
             }
@@ -129,10 +129,11 @@ mod tests {
 
         let dispatcher = &mut CommandDispatcher::<()>::new();
         dispatcher.create_command("test").unwrap();
-        dispatcher
-            .create_command("test2")
-            .unwrap()
-            .argument::<Gamemode, _, _>("gamemode", GamemodeArgument, "gamemode");
+        dispatcher.create_command("test2").unwrap().argument(
+            "gamemode",
+            GamemodeArgument,
+            "gamemode",
+        );
         dispatcher.create_command("3test2").unwrap();
 
         assert_eq!(
@@ -188,10 +189,11 @@ mod tests {
             ])
         );
 
-        dispatcher
-            .create_command("testspaces")
-            .unwrap()
-            .argument::<String, _, _>("s", StringArgument::GREEDY_PHRASE, "none");
+        dispatcher.create_command("testspaces").unwrap().argument(
+            "s",
+            StringArgument::GREEDY_PHRASE,
+            "none",
+        );
 
         assert_eq!(dispatcher.tab_complete(r#"testspaces a "#, ()), None);
         assert_eq!(dispatcher.tab_complete(r#"testspaces a b"#, ()), None);

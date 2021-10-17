@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
@@ -54,7 +53,9 @@ macro_rules! impl_integer_argument {
         }
 
         impl ArgumentParser for $argument {
-            fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+            type Output = $typ;
+
+            fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
                 let mut i = 0;
                 for char in input.chars() {
                     match char {
@@ -74,7 +75,7 @@ macro_rules! impl_integer_argument {
                     Bound::Excluded(x) => value < x,
                     Bound::Unbounded => true,
                 } {
-                    Some((i, Box::new(value)))
+                    Some((i, value))
                 } else {
                     None
                 }
@@ -160,12 +161,14 @@ impl StringArgument {
 }
 
 impl ArgumentParser for StringArgument {
-    fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+    type Output = String;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
         match self.0 {
             StringProperties::SingleWord => input
                 .find(' ')
                 .or_else(|| Some(input.len()))
-                .map(|i| (i, Box::new(input[..i].to_string()) as Box<dyn Any>)),
+                .map(|i| (i, input[..i].to_string())),
             StringProperties::QuotablePhrase => {
                 if input.starts_with('"') {
                     if let (Some(i), _) =
@@ -182,14 +185,12 @@ impl ArgumentParser for StringArgument {
                                 }
                             })
                     {
-                        return Some((i + 1, Box::new(input[1..i].to_string())));
+                        return Some((i + 1, input[1..i].to_string()));
                     }
                     None
                 } else {
                     // behave like SingleWord
-                    input
-                        .find(' ')
-                        .map(|i| (i, Box::new(input[..i].to_string()) as Box<dyn Any>))
+                    input.find(' ').map(|i| (i, input[..i].to_string()))
                 }
             }
             StringProperties::GreedyPhrase => {
@@ -198,7 +199,7 @@ impl ArgumentParser for StringArgument {
                 } else {
                     input.len()
                 };
-                Some((i, Box::new(input[..i].to_string())))
+                Some((i, input[..i].to_string()))
             }
         }
     }
@@ -267,9 +268,10 @@ impl EntityArgument {
 }
 
 impl ArgumentParser for EntityArgument {
-    fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
-        self.parse(input, false)
-            .map(|(i, s)| (i, Box::new(s) as Box<dyn Any>))
+    type Output = EntitySelector;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
+        self.parse(input, false).map(|(i, selector)| (i, selector))
     }
 
     fn get_properties(&self) -> &dyn ParserProperties {
@@ -1757,12 +1759,12 @@ mod entity_selector_serde {
             visitor.visit_newtype_struct(self)
         }
 
-        fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value>
+        fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value>
         where
             V: Visitor<'de>,
         {
             if self.next_char()? == '[' {
-                let value = visitor.visit_seq(CommaSeparated::new(&mut self))?;
+                let value = visitor.visit_seq(CommaSeparated::new(self))?;
                 if self.next_char()? == ']' {
                     Ok(value)
                 } else {
@@ -1792,12 +1794,12 @@ mod entity_selector_serde {
             self.deserialize_seq(visitor)
         }
 
-        fn deserialize_map<V>(mut self, visitor: V) -> Result<V::Value>
+        fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
         where
             V: Visitor<'de>,
         {
             if self.next_char()? == '{' {
-                let value = visitor.visit_map(CommaSeparated::new(&mut self))?;
+                let value = visitor.visit_map(CommaSeparated::new(self))?;
                 if self.next_char()? == '}' {
                     Ok(value)
                 } else {
@@ -2120,7 +2122,9 @@ mod entity_selector_serde {
 pub struct ItemPredicateArgument;
 
 impl ArgumentParser for ItemPredicateArgument {
-    fn parse(&self, mut input: &str) -> Option<(usize, Box<dyn Any>)> {
+    type Output = ItemPredicate;
+
+    fn parse(&self, mut input: &str) -> Option<(usize, Self::Output)> {
         let is_tag = input.starts_with('#');
         if is_tag {
             input = &input[1..];
@@ -2143,13 +2147,13 @@ impl ArgumentParser for ItemPredicateArgument {
         }
         Some((
             is_tag as usize + item.len() + tag_len,
-            Box::new(ItemPredicate {
+            ItemPredicate {
                 predicate_type: match is_tag {
                     true => ItemPredicateType::Tag(item.parse().ok()?),
                     false => ItemPredicateType::Item(item.parse().ok()?),
                 },
                 tag: Tag(tag.unwrap_or_default()),
-            }),
+            },
         ))
     }
 
@@ -2236,7 +2240,9 @@ impl Display for ResourceLocation {
 pub struct MessageArgument;
 
 impl ArgumentParser for MessageArgument {
-    fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
+    type Output = Message;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
         macro_rules! find {
             ($haystack: expr, $( $pattern: literal )|+) => {
                 {
@@ -2267,7 +2273,7 @@ impl ArgumentParser for MessageArgument {
                 break;
             }
         }
-        Some((input.len(), Box::new(Message(strings, selectors))))
+        Some((input.len(), Message(strings, selectors)))
     }
 
     fn get_properties(&self) -> &dyn ParserProperties {

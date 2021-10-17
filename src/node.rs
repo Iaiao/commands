@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::io::Write;
 
 use crate::dispatcher::CommandDispatcher;
-use crate::parser::ArgumentParser;
+use crate::parser::Argument;
 use crate::varint::write_varint;
 
 #[repr(C)]
@@ -21,7 +21,7 @@ pub enum CommandNode {
         execute: Option<usize>,
         name: String,
         suggestions_type: CompletionType,
-        parser: Box<dyn ArgumentParser>,
+        parser: Box<dyn Argument>,
         children: Vec<usize>,
         parent: usize,
     },

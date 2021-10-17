@@ -48,14 +48,14 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         CreateCommand::new(i, self.dispatcher)
     }
 
-    pub fn argument<Arg, Parser: ArgumentParser + 'static, Completion: Into<CompletionType>>(
+    pub fn argument<Parser: ArgumentParser + 'static, Completion: Into<CompletionType>>(
         self,
         name: &str,
         parser: Parser,
         completion_type: Completion,
-    ) -> CreateCommand<'a, T, CombinedTuples<A, (Arg,)>>
+    ) -> CreateCommand<'a, T, CombinedTuples<A, (Parser::Output,)>>
     where
-        <A as Tuple>::HList: Combine<Product<Arg, ()>>,
+        <A as Tuple>::HList: Combine<Product<Parser::Output, ()>>,
     {
         let i = self
             .dispatcher
