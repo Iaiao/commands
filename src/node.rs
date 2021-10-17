@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::io::Write;
 
-use crate::dispatcher::CommandDispatcher;
+use crate::dispatcher::{CommandDispatcher, TabCompletion};
 use crate::parser::Argument;
 use crate::varint::write_varint;
 
@@ -115,16 +115,16 @@ impl CommandNode {
         mut prompt: &str,
         context: &mut U,
         dispatcher: &CommandDispatcher<U>,
-    ) -> Option<Vec<(String, Option<String>)>> {
+    ) -> Option<TabCompletion> {
         match self {
             CommandNode::Root { children } => {
-                let mut result: Option<Vec<(String, Option<String>)>> = None;
+                let mut result: Option<TabCompletion> = None;
                 for child in children {
                     if let Some(suggestions) =
                         dispatcher.find_node_suggestions(prompt, context, *child)
                     {
                         if let Some(result) = result.as_mut() {
-                            result.extend(suggestions);
+                            result.2.extend(suggestions.2);
                         } else {
                             result = Some(suggestions);
                         }
@@ -134,17 +134,26 @@ impl CommandNode {
             }
             CommandNode::Literal { children, name, .. } => {
                 if name.starts_with(prompt) {
-                    Some(vec![(name.to_string(), None)])
+                    Some((
+                        prompt.rfind(' ').unwrap_or(0),
+                        prompt.rsplit(' ').next().unwrap().len(),
+                        vec![(name.to_string(), None)],
+                    ))
                 } else if prompt.starts_with(&format!("{} ", name)) {
                     prompt = &prompt[name.len() + 1..];
-                    let mut result: Option<Vec<(String, Option<String>)>> = None;
+                    let mut result: Option<TabCompletion> = None;
                     for child in children {
-                        if let Some(suggestions) =
+                        if let Some(mut suggestions) =
                             dispatcher.find_node_suggestions(prompt, context, *child)
                         {
                             if let Some(result) = result.as_mut() {
-                                result.extend(suggestions);
+                                if result.0 == suggestions.0 && result.1 == suggestions.1 {
+                                    result.2.extend(suggestions.2);
+                                } else {
+                                    log::warn!("Tab completion ambiguity: different replacement beginning/end")
+                                }
                             } else {
+                                suggestions.0 += name.len() + 1;
                                 result = Some(suggestions);
                             }
                         }
@@ -165,14 +174,19 @@ impl CommandNode {
                         dispatcher.get_completions(suggestions_type, context, prompt)
                     } else {
                         prompt = &prompt[size + 1..];
-                        let mut result: Option<Vec<(String, Option<String>)>> = None;
+                        let mut result: Option<TabCompletion> = None;
                         for child in children {
-                            if let Some(suggestions) =
+                            if let Some(mut suggestions) =
                                 dispatcher.find_node_suggestions(prompt, context, *child)
                             {
                                 if let Some(result) = result.as_mut() {
-                                    result.extend(suggestions);
+                                    if result.0 == suggestions.0 && result.1 == suggestions.1 {
+                                        result.2.extend(suggestions.2);
+                                    } else {
+                                        log::warn!("Tab completion ambiguity: different replacement beginning/end")
+                                    }
                                 } else {
+                                    suggestions.0 += size + 1;
                                     result = Some(suggestions);
                                 }
                             }

@@ -10,7 +10,9 @@ use crate::node::{CommandNode, CompletionType};
 use crate::varint::write_varint;
 
 pub type Args = Vec<Box<dyn Any>>;
-pub type Completer<T> = Box<dyn Fn(&str, &mut T) -> Vec<(String, Option<String>)>>;
+pub type Completer<T> = Box<dyn Fn(&str, &mut T) -> TabCompletion>;
+// (replacement start, replacement end, Vec<(replacement, Option<tooltip>)>)
+pub type TabCompletion = (usize, usize, Vec<(String, Option<String>)>);
 pub type CommandOutput = anyhow::Result<i32>;
 
 pub struct CommandDispatcher<T> {
@@ -60,11 +62,7 @@ impl<T> CommandDispatcher<T> {
             .matches(command, self)
     }
 
-    pub fn tab_complete(
-        &self,
-        prompt: &str,
-        mut context: T,
-    ) -> Option<Vec<(String, Option<String>)>> {
+    pub fn tab_complete(&self, prompt: &str, mut context: T) -> Option<TabCompletion> {
         self.nodes
             .get(0)
             .expect("Couldn't find root node")
@@ -151,19 +149,23 @@ impl<T> CommandDispatcher<T> {
         completion_type: &CompletionType,
         context: &mut T,
         prompt: &str,
-    ) -> Option<Vec<(String, Option<String>)>> {
+    ) -> Option<TabCompletion> {
         match completion_type {
             CompletionType::Custom(s) => self
                 .tab_completers
                 .get(s)
                 .map(|completer| completer(prompt, context)),
-            _ => Some(vec![]),
+            _ => Some((prompt.len(), 0, vec![])),
         }
     }
 
-    pub fn register_tab_completion(&mut self, completion_type: &str, completer: Completer<T>) {
+    pub fn register_tab_completion(
+        &mut self,
+        completion_type: &str,
+        completer: impl Fn(&str, &mut T) -> TabCompletion + 'static,
+    ) {
         self.tab_completers
-            .insert(completion_type.to_owned(), completer);
+            .insert(completion_type.to_owned(), Box::new(completer));
     }
 
     #[allow(clippy::type_complexity)]
@@ -254,7 +256,7 @@ impl<T> CommandDispatcher<T> {
         command: &str,
         context: &mut T,
         node: usize,
-    ) -> Option<Vec<(String, Option<String>)>> {
+    ) -> Option<TabCompletion> {
         self.nodes
             .get(node)?
             .find_suggestions(command, context, self)
