@@ -134,16 +134,12 @@ impl CommandNode {
             }
             CommandNode::Literal { children, name, .. } => {
                 if name.starts_with(prompt) {
-                    Some((
-                        0,
-                        prompt.len(),
-                        vec![(name.to_string(), None)],
-                    ))
+                    Some((0, prompt.len(), vec![(name.to_string(), None)]))
                 } else if prompt.starts_with(&format!("{} ", name)) {
                     prompt = &prompt[name.len() + 1..];
                     let mut result: Option<TabCompletion> = None;
                     for child in children {
-                        if let Some(mut suggestions) =
+                        if let Some(suggestions) =
                             dispatcher.find_node_suggestions(prompt, context, *child)
                         {
                             if let Some(result) = result.as_mut() {
@@ -153,10 +149,12 @@ impl CommandNode {
                                     log::warn!("Tab completion ambiguity: different replacement beginning/end")
                                 }
                             } else {
-                                suggestions.0 += name.len() + 1;
                                 result = Some(suggestions);
                             }
                         }
+                    }
+                    if let Some(suggestions) = result.as_mut() {
+                        suggestions.0 += name.len() + 1
                     }
                     result
                 } else {
@@ -176,7 +174,7 @@ impl CommandNode {
                         prompt = &prompt[size + 1..];
                         let mut result: Option<TabCompletion> = None;
                         for child in children {
-                            if let Some(mut suggestions) =
+                            if let Some(suggestions) =
                                 dispatcher.find_node_suggestions(prompt, context, *child)
                             {
                                 if let Some(result) = result.as_mut() {
@@ -186,10 +184,12 @@ impl CommandNode {
                                         log::warn!("Tab completion ambiguity: different replacement beginning/end")
                                     }
                                 } else {
-                                    suggestions.0 += size + 1;
                                     result = Some(suggestions);
                                 }
                             }
+                        }
+                        if let Some(suggestions) = result.as_mut() {
+                            suggestions.0 += size + 1
                         }
                         result
                     }
