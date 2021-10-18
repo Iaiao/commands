@@ -16,6 +16,7 @@ pub enum CommandNode {
         name: String,
         children: Vec<usize>,
         parent: usize,
+        redirect: Option<usize>,
     },
     Argument {
         execute: Option<usize>,
@@ -24,6 +25,7 @@ pub enum CommandNode {
         parser: Box<dyn Argument>,
         children: Vec<usize>,
         parent: usize,
+        redirect: Option<usize>,
     },
 }
 
@@ -59,6 +61,7 @@ impl CommandNode {
                 name,
                 children,
                 execute,
+                redirect,
                 ..
             } => {
                 if execute.is_some() && command == name {
@@ -66,9 +69,13 @@ impl CommandNode {
                 } else if command.starts_with(&format!("{} ", name)) {
                     let command = &command[name.len() + 1..];
                     let mut result = None;
+                    let mut children = children.clone();
+                    if let Some(redirect) = redirect {
+                        children.extend(dispatcher.nodes.get(*redirect).unwrap().children());
+                    }
                     for child in children {
-                        if let Some(nodes) = dispatcher.matches(command, *child) {
-                            let mut res = vec![*child];
+                        if let Some(nodes) = dispatcher.matches(command, child) {
+                            let mut res = vec![child];
                             res.extend(nodes);
                             result = Some(res);
                             break;
@@ -83,6 +90,7 @@ impl CommandNode {
                 execute,
                 parser,
                 children,
+                redirect,
                 ..
             } => {
                 if let Some((size, _)) = parser.parse(command) {
@@ -93,9 +101,13 @@ impl CommandNode {
                     } else {
                         let command = &command[size + 1..];
                         let mut result = None;
+                        let mut children = children.clone();
+                        if let Some(redirect) = redirect {
+                            children.extend(dispatcher.nodes.get(*redirect).unwrap().children());
+                        }
                         for child in children {
-                            if let Some(nodes) = dispatcher.matches(command, *child) {
-                                let mut res = vec![*child];
+                            if let Some(nodes) = dispatcher.matches(command, child) {
+                                let mut res = vec![child];
                                 res.extend(nodes);
                                 result = Some(res);
                                 break;
@@ -132,15 +144,24 @@ impl CommandNode {
                 }
                 result
             }
-            CommandNode::Literal { children, name, .. } => {
+            CommandNode::Literal {
+                children,
+                name,
+                redirect,
+                ..
+            } => {
                 if name.starts_with(prompt) {
                     Some((0, prompt.len(), vec![(name.to_string(), None)]))
                 } else if prompt.starts_with(&format!("{} ", name)) {
                     prompt = &prompt[name.len() + 1..];
                     let mut result: Option<TabCompletion> = None;
+                    let mut children = children.clone();
+                    if let Some(redirect) = redirect {
+                        children.extend(dispatcher.nodes.get(*redirect).unwrap().children());
+                    }
                     for child in children {
                         if let Some(suggestions) =
-                            dispatcher.find_node_suggestions(prompt, context, *child)
+                            dispatcher.find_node_suggestions(prompt, context, child)
                         {
                             if let Some(result) = result.as_mut() {
                                 if result.0 == suggestions.0 && result.1 == suggestions.1 {
@@ -165,6 +186,7 @@ impl CommandNode {
                 parser,
                 children,
                 suggestions_type,
+                redirect,
                 ..
             } => {
                 if let Some((size, _)) = parser.parse(prompt) {
@@ -173,9 +195,13 @@ impl CommandNode {
                     } else {
                         prompt = &prompt[size + 1..];
                         let mut result: Option<TabCompletion> = None;
+                        let mut children = children.clone();
+                        if let Some(redirect) = redirect {
+                            children.extend(dispatcher.nodes.get(*redirect).unwrap().children());
+                        }
                         for child in children {
                             if let Some(suggestions) =
-                                dispatcher.find_node_suggestions(prompt, context, *child)
+                                dispatcher.find_node_suggestions(prompt, context, child)
                             {
                                 if let Some(result) = result.as_mut() {
                                     if result.0 == suggestions.0 && result.1 == suggestions.1 {
@@ -240,16 +266,23 @@ impl CommandNode {
                 execute,
                 name,
                 children,
+                redirect,
                 ..
             } => {
                 let mut flags = 1;
                 if execute.is_some() {
                     flags |= 1 << 2;
                 }
+                if redirect.is_some() {
+                    flags |= 1 << 3;
+                }
                 wrote += buf.write(&[flags])?;
                 wrote += write_varint(children.len() as i32, buf)?;
                 for child in children {
                     wrote += write_varint(*child as i32, buf)?;
+                }
+                if let Some(redirect) = redirect {
+                    wrote = write_varint(*redirect as i32, buf)?;
                 }
                 wrote += write_varint(name.as_bytes().len() as i32, buf)?;
                 wrote += buf.write(name.as_bytes())?;
@@ -260,17 +293,24 @@ impl CommandNode {
                 suggestions_type,
                 parser,
                 children,
+                redirect,
                 ..
             } => {
                 let mut flags = 2;
                 if execute.is_some() {
                     flags |= 1 << 2;
                 }
+                if redirect.is_some() {
+                    flags |= 1 << 3;
+                }
                 flags |= 1 << 4;
                 wrote += buf.write(&[flags])?;
                 wrote += write_varint(children.len() as i32, buf)?;
                 for child in children {
                     wrote += write_varint(*child as i32, buf)?;
+                }
+                if let Some(redirect) = redirect {
+                    wrote = write_varint(*redirect as i32, buf)?;
                 }
                 wrote += write_varint(name.as_bytes().len() as i32, buf)?;
                 wrote += buf.write(name.as_bytes())?;

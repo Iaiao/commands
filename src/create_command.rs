@@ -24,6 +24,20 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         }
     }
 
+    pub fn current_node_id(&self) -> usize {
+        self.current_node
+    }
+
+    pub fn redirect(self, redirect_node: usize) -> Self {
+        match self.dispatcher.nodes.get_mut(self.current_node).unwrap() {
+            CommandNode::Root { .. } => unreachable!(),
+            CommandNode::Literal { redirect, .. } | CommandNode::Argument { redirect, .. } => {
+                *redirect = Some(redirect_node)
+            }
+        }
+        self
+    }
+
     pub fn with(self, f: impl FnOnce(Self)) -> Self {
         let node = self.current_node;
 
@@ -44,6 +58,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
                 name: name.to_owned(),
                 children: vec![],
                 parent: self.current_node,
+                redirect: None,
             })
             .unwrap();
         CreateCommand::new(i, self.dispatcher)
@@ -70,6 +85,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
                 parser: Box::new(parser),
                 children: vec![],
                 parent: self.current_node,
+                redirect: None,
             })
             .unwrap();
         CreateCommand::new(i, self.dispatcher)

@@ -81,6 +81,7 @@ impl<T> CommandDispatcher<T> {
                     name: name.to_owned(),
                     children: vec![],
                     parent: node,
+                    redirect: None,
                 })?;
             }
             Ok(CreateCommand::new(node, self))
@@ -190,6 +191,7 @@ impl<T> CommandDispatcher<T> {
                     name,
                     children,
                     parent,
+                    redirect,
                 } => {
                     let i = self.nodes.insert(CommandNode::Literal {
                         execute: execute.map(|e| e + executors_len),
@@ -200,6 +202,7 @@ impl<T> CommandDispatcher<T> {
                         } else {
                             parent + nodes_len - 1
                         },
+                        redirect: redirect.map(|r| if r == 0 { 0 } else { nodes_len + r }),
                     });
                     if parent == 0 {
                         self.nodes.get_mut(0).unwrap().add_child(i);
@@ -212,6 +215,7 @@ impl<T> CommandDispatcher<T> {
                     parser,
                     children,
                     parent,
+                    redirect,
                 } => {
                     self.nodes.insert(CommandNode::Argument {
                         execute: execute.map(|e| e + executors_len),
@@ -224,6 +228,7 @@ impl<T> CommandDispatcher<T> {
                         } else {
                             parent + nodes_len - 1
                         },
+                        redirect: redirect.map(|r| if r == 0 { 0 } else { nodes_len + r }),
                     });
                 }
             }

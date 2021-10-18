@@ -204,4 +204,38 @@ mod tests {
         assert_eq!(dispatcher.tab_complete(r#"testspaces a "#, ()), None);
         assert_eq!(dispatcher.tab_complete(r#"testspaces a b"#, ()), None);
     }
+
+    #[test]
+    fn test_redirect() {
+        let mut dispatcher = CommandDispatcher::<()>::new();
+        let root = 0;
+        dispatcher
+            .create_command("test")
+            .unwrap()
+            .executes(|_| Ok(1));
+        let command = dispatcher.create_command("execute").unwrap();
+        let execute = command.current_node_id();
+        command
+            .with(|command| {
+                command
+                    .subcommand("as")
+                    .argument("entity", EntityArgument::ENTITIES, "none")
+                    .redirect(execute);
+            })
+            .with(|command| {
+                command.subcommand("run").redirect(root);
+            });
+
+        assert_eq!(
+            dispatcher.find_command("execute run test"),
+            Some(vec![2, 5, 1])
+        );
+        assert_eq!(
+            dispatcher
+                .execute_command("execute as @a run test", ())
+                .unwrap()
+                .unwrap(),
+            1
+        );
+    }
 }
