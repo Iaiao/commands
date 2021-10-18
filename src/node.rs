@@ -209,6 +209,22 @@ impl CommandNode {
         }
     }
 
+    pub fn children(&self) -> &Vec<usize> {
+        match self {
+            CommandNode::Root { children }
+            | CommandNode::Literal { children, .. }
+            | CommandNode::Argument { children, .. } => children,
+        }
+    }
+
+    pub fn children_mut(&mut self) -> &mut Vec<usize> {
+        match self {
+            CommandNode::Root { children }
+            | CommandNode::Literal { children, .. }
+            | CommandNode::Argument { children, .. } => children,
+        }
+    }
+
     pub fn write_to(&self, buf: &mut dyn Write) -> std::io::Result<usize> {
         let mut wrote = 0;
         match self {
@@ -270,15 +286,7 @@ impl CommandNode {
     }
 
     pub(crate) fn add_child(&mut self, child: usize) {
-        match self {
-            CommandNode::Root { children }
-            | CommandNode::Literal { children, .. }
-            | CommandNode::Argument { children, .. } => {
-                if !children.contains(&child) {
-                    children.push(child)
-                }
-            }
-        }
+        self.children_mut().push(child)
     }
 
     pub(crate) fn executes(&mut self, f: usize) {
