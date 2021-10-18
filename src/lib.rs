@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_completions() {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct GamemodeArgument;
 
         impl ArgumentParser for GamemodeArgument {

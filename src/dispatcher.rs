@@ -234,6 +234,10 @@ impl<T> CommandDispatcher<T> {
         self.executors.insert(Box::new(executor))
     }
 
+    pub fn nodes(&self) -> impl Iterator<Item = (usize, &CommandNode)> {
+        self.nodes.iter()
+    }
+
     pub(crate) fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
         let parent = child.parent().unwrap();
         let i = self.nodes.insert(child);

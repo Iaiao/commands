@@ -1,18 +1,20 @@
 use std::any::Any;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::io::Write;
 
-pub trait Argument {
+pub trait Argument: Debug + Send {
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)>;
 
     fn get_properties(&self) -> &dyn ParserProperties;
 
     fn get_identifier(&self) -> &'static str;
+
+    fn clone_boxed(&self) -> Box<dyn Argument>;
 }
 
-impl<T, U: 'static> Argument for T
+impl<T: 'static, U: 'static> Argument for T
 where
-    T: ArgumentParser<Output = U>,
+    T: ArgumentParser<Output = U> + Debug + Clone + Send,
 {
     fn parse(&self, input: &str) -> Option<(usize, Box<dyn Any>)> {
         ArgumentParser::parse(self, input).map(|(i, output)| (i, Box::new(output) as Box<dyn Any>))
@@ -25,11 +27,9 @@ where
     fn get_identifier(&self) -> &'static str {
         ArgumentParser::get_identifier(self)
     }
-}
 
-impl Debug for dyn Argument {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.get_identifier())
+    fn clone_boxed(&self) -> Box<dyn Argument> {
+        Box::new(self.clone())
     }
 }
 

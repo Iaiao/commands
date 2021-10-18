@@ -31,7 +31,7 @@ fn split_two_dots_once(s: &str) -> Option<(&str, &str)> {
 
 macro_rules! impl_integer_argument {
     ($argument: ident, $properties: ident, $typ: ty, $is_float: literal, $identifier: literal) => {
-        #[derive(PartialEq, Debug)]
+        #[derive(PartialEq, Debug, Clone)]
         pub struct $argument(pub $properties);
 
         impl Default for $argument {
@@ -90,7 +90,7 @@ macro_rules! impl_integer_argument {
             }
         }
 
-        #[derive(PartialEq, Debug)]
+        #[derive(PartialEq, Debug, Clone)]
         pub struct $properties {
             min: Bound<$typ>,
             max: Bound<$typ>,
@@ -2118,7 +2118,7 @@ mod entity_selector_serde {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ItemPredicateArgument;
 
 impl ArgumentParser for ItemPredicateArgument {
@@ -2236,7 +2236,7 @@ impl Display for ResourceLocation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MessageArgument;
 
 impl ArgumentParser for MessageArgument {

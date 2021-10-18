@@ -4,6 +4,7 @@ use crate::args::{Combine, CombinedTuples, Func, Product, Tuple};
 use crate::dispatcher::CommandDispatcher;
 use crate::node::{CommandNode, CompletionType};
 use crate::parser::ArgumentParser;
+use std::fmt::Debug;
 
 pub struct CreateCommand<'a, T, A: 'a + Tuple> {
     current_node: usize,
@@ -48,7 +49,10 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         CreateCommand::new(i, self.dispatcher)
     }
 
-    pub fn argument<Parser: ArgumentParser + 'static, Completion: Into<CompletionType>>(
+    pub fn argument<
+        Parser: ArgumentParser + Debug + Clone + Send + 'static,
+        Completion: Into<CompletionType>,
+    >(
         self,
         name: &str,
         parser: Parser,
