@@ -1,10 +1,10 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use crate::args::{Combine, CombinedTuples, Func, Product, Tuple};
-use crate::dispatcher::CommandDispatcher;
+use crate::dispatcher::{Args, CommandDispatcher, CommandOutput};
 use crate::node::{CommandNode, CompletionType};
 use crate::parser::ArgumentParser;
-use std::fmt::Debug;
 
 pub struct CreateCommand<'a, T, A: 'a + Tuple> {
     current_node: usize,
@@ -38,6 +38,27 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         self
     }
 
+    // TODO change `Args` to `A`
+    /// Execute multiple commands with different contexts
+    pub fn fork(
+        self,
+        f: impl FnMut(
+                Args,
+                T,
+                Option<usize>,
+                Box<&mut dyn FnMut(Args, T) -> CommandOutput>,
+            ) -> CommandOutput
+            + 'static,
+    ) -> Self {
+        match self.dispatcher.nodes.get_mut(self.current_node).unwrap() {
+            CommandNode::Root { .. } => unreachable!(),
+            CommandNode::Literal { fork, .. } | CommandNode::Argument { fork, .. } => {
+                *fork = Some(Box::new(f))
+            }
+        }
+        self
+    }
+
     pub fn with(self, f: impl FnOnce(Self)) -> Self {
         let node = self.current_node;
 
@@ -53,12 +74,13 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
     pub fn subcommand(self, name: &str) -> Self {
         let i = self
             .dispatcher
-            .insert_child(CommandNode::Literal {
+            .insert_child(CommandNode::<T>::Literal {
                 execute: None,
                 name: name.to_owned(),
                 children: vec![],
                 parent: self.current_node,
                 redirect: None,
+                fork: None,
             })
             .unwrap();
         CreateCommand::new(i, self.dispatcher)
@@ -86,6 +108,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
                 children: vec![],
                 parent: self.current_node,
                 redirect: None,
+                fork: None,
             })
             .unwrap();
         CreateCommand::new(i, self.dispatcher)

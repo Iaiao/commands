@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_redirect() {
+    fn test_redirect_and_fork() {
         let mut dispatcher = CommandDispatcher::<()>::new();
         let root = 0;
         dispatcher
@@ -220,7 +220,13 @@ mod tests {
                 command
                     .subcommand("as")
                     .argument("entity", EntityArgument::ENTITIES, "none")
-                    .redirect(execute);
+                    .redirect(execute)
+                    .fork(|_args, ctx, _arg_i, mut f| {
+                        for _ in 0..5 {
+                            f(vec![], ctx).unwrap();
+                        }
+                        Ok(1)
+                    });
             })
             .with(|command| {
                 command.subcommand("run").redirect(root);
@@ -235,7 +241,7 @@ mod tests {
                 .execute_command("execute as @a run test", ())
                 .unwrap()
                 .unwrap(),
-            1
+            5
         );
     }
 }
