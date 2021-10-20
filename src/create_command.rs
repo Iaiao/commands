@@ -53,7 +53,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         match self.dispatcher.nodes.get_mut(self.current_node).unwrap() {
             CommandNode::Root { .. } => unreachable!(),
             CommandNode::Literal { fork, .. } | CommandNode::Argument { fork, .. } => {
-                *fork = Some(Box::new(f))
+                *fork = Some(self.dispatcher.forks.insert(Box::new(f)))
             }
         }
         self
@@ -74,7 +74,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
     pub fn subcommand(self, name: &str) -> Self {
         let i = self
             .dispatcher
-            .insert_child(CommandNode::<T>::Literal {
+            .insert_child(CommandNode::Literal {
                 execute: None,
                 name: name.to_owned(),
                 children: vec![],

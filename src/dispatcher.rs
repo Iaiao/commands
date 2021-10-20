@@ -17,9 +17,10 @@ pub type CommandOutput = anyhow::Result<i32>;
 
 pub struct CommandDispatcher<T> {
     // 0 is always root node
-    pub(crate) nodes: Slab<CommandNode<T>>,
+    pub(crate) nodes: Slab<CommandNode>,
     pub(crate) executors: Slab<Box<dyn Fn(Args, T) -> CommandOutput>>,
     pub(crate) tab_completers: HashMap<String, Completer<T>>,
+    pub(crate) forks: Slab<Box<Fork<T>>>,
 }
 
 impl<T> Debug for CommandDispatcher<T> {
@@ -52,6 +53,7 @@ impl<T> CommandDispatcher<T> {
             nodes,
             executors: Slab::new(),
             tab_completers: HashMap::default(),
+            forks: Slab::new(),
         }
     }
 
@@ -76,7 +78,7 @@ impl<T> CommandDispatcher<T> {
             let names = name.split(' ');
             let mut node = 0;
             for name in names {
-                node = self.insert_child(CommandNode::<T>::Literal {
+                node = self.insert_child(CommandNode::Literal {
                     execute: None,
                     name: name.to_owned(),
                     children: vec![],
@@ -89,7 +91,10 @@ impl<T> CommandDispatcher<T> {
         }
     }
 
-    pub fn execute_command(&mut self, mut command: &str, context: T) -> Option<CommandOutput> {
+    pub fn execute_command(&mut self, mut command: &str, context: T) -> Option<CommandOutput>
+    where
+        T: 'static,
+    {
         let cmd = self.find_command(command);
         let mut executor = None;
         if let Some(cmd) = cmd {
@@ -105,9 +110,8 @@ impl<T> CommandDispatcher<T> {
                             fork,
                             ..
                         } => {
-                            if let Some(fork) = fork.as_mut() {
-                                // TODO replace with safe code
-                                forks.push((None, unsafe { &mut *(fork as *mut _) }));
+                            if let Some(fork) = fork {
+                                forks.push((None, *fork));
                             }
                             if execute.is_some() && command == name {
                                 executor = Some(execute.unwrap());
@@ -125,11 +129,8 @@ impl<T> CommandDispatcher<T> {
                             if let Some(parse_result) = parser.parse(command) {
                                 let (i, arg): (usize, Box<dyn Any>) = parse_result;
                                 args.push(arg);
-                                if let Some(fork) = fork.as_mut() {
-                                    // TODO replace with safe code
-                                    forks.push((Some(args.len() - 1), unsafe {
-                                        &mut *(fork as *mut _)
-                                    }));
+                                if let Some(fork) = fork {
+                                    forks.push((None, *fork));
                                 }
                                 if execute.is_some() && command.len() == i {
                                     executor = Some(execute.unwrap());
@@ -149,20 +150,28 @@ impl<T> CommandDispatcher<T> {
                 }
             }
             executor.map(|execute| {
-                let execute = self.executors.get(execute).unwrap();
                 let mut successful_forks = 0;
-                let res = next(0, execute, &mut forks, args, context, &mut successful_forks);
+                let res = next(
+                    0,
+                    execute,
+                    &mut forks,
+                    args,
+                    context,
+                    &mut successful_forks,
+                    self,
+                );
 
-                fn next<T>(
+                fn next<T: 'static>(
                     i: usize,
-                    execute: &dyn Fn(Args, T) -> CommandOutput,
-                    forks: &mut Vec<(Option<usize>, &mut Box<Fork<T>>)>,
+                    execute: usize,
+                    forks: &mut Vec<(Option<usize>, usize)>,
                     args: Args,
                     context: T,
                     successful_forks: &mut i32,
+                    dispatcher: &mut CommandDispatcher<T>,
                 ) -> CommandOutput {
                     if forks.len() <= i {
-                        match execute(args, context) {
+                        match dispatcher.executors.get_mut(execute).unwrap()(args, context) {
                             Ok(res) => {
                                 *successful_forks += 1;
                                 Ok(res)
@@ -170,24 +179,25 @@ impl<T> CommandDispatcher<T> {
                             Err(err) => Err(err),
                         }
                     } else {
-                        // TODO rewrite this
                         let (arg, fork) = forks.get_mut(i).unwrap();
-                        let fork = unsafe {
-                            &mut *(fork as *mut &mut Box<
-                                dyn FnMut(
-                                    Args,
-                                    T,
-                                    Option<usize>,
-                                    Box<&mut dyn FnMut(Args, T) -> CommandOutput>,
-                                ) -> CommandOutput,
-                            >)
+                        // SAFETY: `forks` is pub(crate), so the fork can't invalidate itself
+                        let f = unsafe {
+                            &mut *(dispatcher.forks.get_mut(*fork).unwrap() as *mut Fork<T>)
                         };
-                        fork(
+                        f(
                             args,
                             context,
                             *arg,
                             Box::new(&mut |args, context| {
-                                next(i + 1, execute, forks, args, context, successful_forks)
+                                next(
+                                    i + 1,
+                                    execute,
+                                    forks,
+                                    args,
+                                    context,
+                                    successful_forks,
+                                    dispatcher,
+                                )
                             }),
                         )
                     }
@@ -242,14 +252,14 @@ impl<T> CommandDispatcher<T> {
     pub fn into_parts(
         self,
     ) -> (
-        Slab<CommandNode<T>>,
+        Slab<CommandNode>,
         Slab<Box<dyn Fn(Args, T) -> CommandOutput>>,
         HashMap<String, Completer<T>>,
     ) {
         (self.nodes, self.executors, self.tab_completers)
     }
 
-    pub fn add_nodes(&mut self, nodes: Vec<CommandNode<T>>) {
+    pub fn add_nodes(&mut self, nodes: Vec<CommandNode>) {
         let nodes_len = self.nodes.len();
         let executors_len = self.executors.len();
         for node in nodes {
@@ -312,11 +322,11 @@ impl<T> CommandDispatcher<T> {
         self.executors.insert(Box::new(executor))
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = (usize, &CommandNode<T>)> {
+    pub fn nodes(&self) -> impl Iterator<Item = (usize, &CommandNode)> {
         self.nodes.iter()
     }
 
-    pub(crate) fn insert_child(&mut self, child: CommandNode<T>) -> anyhow::Result<usize> {
+    pub(crate) fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
         let parent = child.parent().unwrap();
         let i = self.nodes.insert(child);
         let parent = self

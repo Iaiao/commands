@@ -13,7 +13,7 @@ pub type Fork<T> = dyn for<'a> FnMut(
 ) -> CommandOutput;
 
 #[repr(C)]
-pub enum CommandNode<T> {
+pub enum CommandNode {
     Root {
         children: Vec<usize>,
     },
@@ -23,7 +23,7 @@ pub enum CommandNode<T> {
         children: Vec<usize>,
         parent: usize,
         redirect: Option<usize>,
-        fork: Option<Box<Fork<T>>>,
+        fork: Option<usize>,
     },
     Argument {
         execute: Option<usize>,
@@ -33,11 +33,11 @@ pub enum CommandNode<T> {
         children: Vec<usize>,
         parent: usize,
         redirect: Option<usize>,
-        fork: Option<Box<Fork<T>>>,
+        fork: Option<usize>,
     },
 }
 
-impl<T> Debug for CommandNode<T> {
+impl Debug for CommandNode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             CommandNode::Root { children } => {
@@ -98,7 +98,7 @@ impl<T> Debug for CommandNode<T> {
 }
 
 #[allow(clippy::derivable_impls)]
-impl<T> Default for CommandNode<T> {
+impl Default for CommandNode {
     fn default() -> Self {
         CommandNode::Root {
             children: Default::default(),
@@ -106,8 +106,12 @@ impl<T> Default for CommandNode<T> {
     }
 }
 
-impl<T> CommandNode<T> {
-    pub fn matches(&self, command: &str, dispatcher: &CommandDispatcher<T>) -> Option<Vec<usize>> {
+impl CommandNode {
+    pub fn matches<T>(
+        &self,
+        command: &str,
+        dispatcher: &CommandDispatcher<T>,
+    ) -> Option<Vec<usize>> {
         match self {
             CommandNode::Root { children } => {
                 let mut result = None;
@@ -186,7 +190,7 @@ impl<T> CommandNode<T> {
         }
     }
 
-    pub fn find_suggestions(
+    pub fn find_suggestions<T>(
         &self,
         mut prompt: &str,
         context: &mut T,
