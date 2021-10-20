@@ -35,6 +35,10 @@ impl<T> Debug for CommandDispatcher<T> {
                 &format!("Executors ({})", self.executors.len()),
             )
             .field("tab_completers", &self.tab_completers.keys())
+            .field(
+                "forks",
+                &self.forks.iter().map(|(i, _)| i).collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -255,8 +259,9 @@ impl<T> CommandDispatcher<T> {
         Slab<CommandNode>,
         Slab<Box<dyn Fn(Args, T) -> CommandOutput>>,
         HashMap<String, Completer<T>>,
+        Slab<Box<Fork<T>>>,
     ) {
-        (self.nodes, self.executors, self.tab_completers)
+        (self.nodes, self.executors, self.tab_completers, self.forks)
     }
 
     pub fn add_nodes(&mut self, nodes: Vec<CommandNode>) {
@@ -324,6 +329,10 @@ impl<T> CommandDispatcher<T> {
 
     pub fn nodes(&self) -> impl Iterator<Item = (usize, &CommandNode)> {
         self.nodes.iter()
+    }
+
+    pub fn fork(&mut self, fork: usize) -> Option<&mut Box<Fork<T>>> {
+        self.forks.get_mut(fork)
     }
 
     pub(crate) fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
