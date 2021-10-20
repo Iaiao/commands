@@ -267,6 +267,7 @@ impl<T> CommandDispatcher<T> {
     pub fn add_nodes(&mut self, nodes: Vec<CommandNode>) {
         let nodes_len = self.nodes.len();
         let executors_len = self.executors.len();
+        let forks_len = self.forks.len();
         for node in nodes {
             match node {
                 CommandNode::Root { .. } => (),
@@ -288,7 +289,7 @@ impl<T> CommandDispatcher<T> {
                             parent + nodes_len - 1
                         },
                         redirect: redirect.map(|r| if r == 0 { 0 } else { nodes_len + r }),
-                        fork,
+                        fork: fork.map(|f| f + forks_len),
                     });
                     if parent == 0 {
                         self.nodes.get_mut(0).unwrap().add_child(i);
@@ -316,7 +317,7 @@ impl<T> CommandDispatcher<T> {
                             parent + nodes_len - 1
                         },
                         redirect: redirect.map(|r| if r == 0 { 0 } else { nodes_len + r }),
-                        fork,
+                        fork: fork.map(|f| f + forks_len),
                     });
                 }
             }
@@ -325,6 +326,10 @@ impl<T> CommandDispatcher<T> {
 
     pub fn add_executor(&mut self, executor: impl Fn(Args, T) -> CommandOutput + 'static) -> usize {
         self.executors.insert(Box::new(executor))
+    }
+
+    pub fn add_fork(&mut self, fork: Box<Fork<T>>) -> usize {
+        self.forks.insert(fork)
     }
 
     pub fn nodes(&self) -> impl Iterator<Item = (usize, &CommandNode)> {
