@@ -41,10 +41,10 @@ impl Default for CommandNode {
 }
 
 impl CommandNode {
-    pub fn matches<T>(
+    pub fn matches<T, Text>(
         &self,
         command: &str,
-        dispatcher: &CommandDispatcher<T>,
+        dispatcher: &CommandDispatcher<T, Text>,
     ) -> Option<Vec<usize>> {
         match self {
             CommandNode::Root { children } => {
@@ -124,15 +124,15 @@ impl CommandNode {
         }
     }
 
-    pub fn find_suggestions<T>(
+    pub fn find_suggestions<T, Text>(
         &self,
         mut prompt: &str,
         context: &mut T,
-        dispatcher: &CommandDispatcher<T>,
-    ) -> Option<TabCompletion> {
+        dispatcher: &CommandDispatcher<T, Text>,
+    ) -> Option<TabCompletion<Text>> {
         match self {
             CommandNode::Root { children } => {
-                let mut result: Option<TabCompletion> = None;
+                let mut result: Option<TabCompletion<Text>> = None;
                 for child in children {
                     if let Some(suggestions) =
                         dispatcher.find_node_suggestions(prompt, context, *child)
@@ -156,7 +156,7 @@ impl CommandNode {
                     Some((0, prompt.len(), vec![(name.to_string(), None)]))
                 } else if prompt.starts_with(&format!("{} ", name)) {
                     prompt = &prompt[name.len() + 1..];
-                    let mut result: Option<TabCompletion> = None;
+                    let mut result: Option<TabCompletion<Text>> = None;
                     let mut children = children.clone();
                     if let Some(redirect) = redirect {
                         children.extend(dispatcher.nodes.get(*redirect).unwrap().children());
@@ -196,7 +196,7 @@ impl CommandNode {
                         dispatcher.get_completions(suggestions_type, context, prompt)
                     } else {
                         prompt = &prompt[size + 1..];
-                        let mut result: Option<TabCompletion> = None;
+                        let mut result: Option<TabCompletion<Text>> = None;
                         let mut children = children.clone();
                         if let Some(redirect) = redirect {
                             children.extend(dispatcher.nodes.get(*redirect).unwrap().children());

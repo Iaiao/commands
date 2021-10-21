@@ -6,17 +6,17 @@ use crate::dispatcher::{Args, CommandDispatcher, CommandOutput};
 use crate::node::{CommandNode, CompletionType};
 use crate::parser::ArgumentParser;
 
-pub struct CreateCommand<'a, T, A: 'a + Tuple> {
+pub struct CreateCommand<'a, T, Text, A: 'a + Tuple> {
     current_node: usize,
-    dispatcher: &'a mut CommandDispatcher<T>,
+    dispatcher: &'a mut CommandDispatcher<T, Text>,
     args_type: PhantomData<A>,
 }
 
-impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
+impl<'a, T, Text, A: 'a + Tuple> CreateCommand<'a, T, Text, A> {
     pub(crate) fn new(
         node: usize,
-        dispatcher: &'a mut CommandDispatcher<T>,
-    ) -> CreateCommand<'a, T, A> {
+        dispatcher: &'a mut CommandDispatcher<T, Text>,
+    ) -> CreateCommand<'a, T, Text, A> {
         CreateCommand {
             current_node: node,
             dispatcher,
@@ -59,7 +59,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
 
         // TODO fix this
         unsafe {
-            let ptr = self.dispatcher as *mut CommandDispatcher<T>;
+            let ptr = self.dispatcher as *mut CommandDispatcher<T, Text>;
             f(CreateCommand::new(node, &mut *ptr));
         }
 
@@ -89,7 +89,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
         name: &str,
         parser: Parser,
         completion_type: Completion,
-    ) -> CreateCommand<'a, T, CombinedTuples<A, (Parser::Output,)>>
+    ) -> CreateCommand<'a, T, Text, CombinedTuples<A, (Parser::Output,)>>
     where
         <A as Tuple>::HList: Combine<Product<Parser::Output, ()>>,
     {

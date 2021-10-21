@@ -14,7 +14,7 @@ mod tests {
 
     #[test]
     fn simple_command() {
-        let mut dispatcher = CommandDispatcher::<()>::new();
+        let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test 1")
             .unwrap()
@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn command_with_argument() {
-        let mut dispatcher = CommandDispatcher::<()>::new();
+        let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test")
             .unwrap()
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn command_with_subcommands() {
-        let mut dispatcher = CommandDispatcher::<()>::new();
+        let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test")
             .unwrap()
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_packet() {
-        let mut dispatcher = CommandDispatcher::<()>::new();
+        let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test")
             .unwrap()
@@ -127,7 +127,7 @@ mod tests {
             }
         }
 
-        let dispatcher = &mut CommandDispatcher::<()>::new();
+        let dispatcher = &mut CommandDispatcher::<(), String>::new();
         dispatcher.create_command("test").unwrap();
         dispatcher.create_command("test2").unwrap().argument(
             "gamemode",
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_redirect_and_fork() {
-        let mut dispatcher = CommandDispatcher::<()>::new();
+        let mut dispatcher = CommandDispatcher::<(), ()>::new();
         let root = 0;
         dispatcher
             .create_command("test")

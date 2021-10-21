@@ -10,9 +10,9 @@ use crate::node::{CommandNode, CompletionType};
 use crate::varint::write_varint;
 
 pub type Args = Vec<Box<dyn Any>>;
-pub type Completer<T> = Box<dyn Fn(&str, &mut T) -> TabCompletion>;
+pub type Completer<T, Text> = Box<dyn Fn(&str, &mut T) -> TabCompletion<Text>>;
 // (replacement start, replacement end, Vec<(replacement, Option<tooltip>)>)
-pub type TabCompletion = (usize, usize, Vec<(String, Option<String>)>);
+pub type TabCompletion<Text> = (usize, usize, Vec<(String, Option<Text>)>);
 pub type CommandOutput = anyhow::Result<i32>;
 pub type Fork<T> = dyn for<'a> FnMut(
     &mut Args,
@@ -20,15 +20,15 @@ pub type Fork<T> = dyn for<'a> FnMut(
     Box<&'a mut dyn FnMut(&mut Args, T) -> CommandOutput>,
 ) -> CommandOutput;
 
-pub struct CommandDispatcher<T> {
+pub struct CommandDispatcher<T, Text> {
     // 0 is always root node
     pub(crate) nodes: Slab<CommandNode>,
     pub(crate) executors: Slab<Box<dyn Fn(&mut Args, T) -> CommandOutput>>,
-    pub(crate) tab_completers: HashMap<String, Completer<T>>,
+    pub(crate) tab_completers: HashMap<String, Completer<T, Text>>,
     pub(crate) forks: Slab<Box<Fork<T>>>,
 }
 
-impl<T> Debug for CommandDispatcher<T> {
+impl<T, Text> Debug for CommandDispatcher<T, Text> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandDispatcher")
             .field(
@@ -48,14 +48,14 @@ impl<T> Debug for CommandDispatcher<T> {
     }
 }
 
-impl<T> Default for CommandDispatcher<T> {
+impl<T, Text> Default for CommandDispatcher<T, Text> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> CommandDispatcher<T> {
-    pub fn new() -> CommandDispatcher<T> {
+impl<T, Text> CommandDispatcher<T, Text> {
+    pub fn new() -> CommandDispatcher<T, Text> {
         let mut nodes = Slab::new();
         nodes.insert(CommandNode::default());
         CommandDispatcher {
@@ -73,14 +73,14 @@ impl<T> CommandDispatcher<T> {
             .matches(command, self)
     }
 
-    pub fn tab_complete(&self, prompt: &str, mut context: T) -> Option<TabCompletion> {
+    pub fn tab_complete(&self, prompt: &str, mut context: T) -> Option<TabCompletion<Text>> {
         self.nodes
             .get(0)
             .expect("Couldn't find root node")
             .find_suggestions(prompt, &mut context, self)
     }
 
-    pub fn create_command(&mut self, name: &str) -> anyhow::Result<CreateCommand<T, ()>> {
+    pub fn create_command(&mut self, name: &str) -> anyhow::Result<CreateCommand<T, Text, ()>> {
         if name.is_empty() {
             bail!("Command name is empty")
         } else {
@@ -170,14 +170,14 @@ impl<T> CommandDispatcher<T> {
                     self,
                 );
 
-                fn next<T: 'static>(
+                fn next<T: 'static, Text>(
                     i: usize,
                     execute: usize,
                     forks: &mut Vec<usize>,
                     args: &mut Args,
                     context: T,
                     successful_forks: &mut i32,
-                    dispatcher: &mut CommandDispatcher<T>,
+                    dispatcher: &mut CommandDispatcher<T, Text>,
                 ) -> CommandOutput {
                     if forks.len() <= i {
                         match dispatcher.executors.get_mut(execute).unwrap()(args, context) {
@@ -237,7 +237,7 @@ impl<T> CommandDispatcher<T> {
         completion_type: &CompletionType,
         context: &mut T,
         prompt: &str,
-    ) -> Option<TabCompletion> {
+    ) -> Option<TabCompletion<Text>> {
         match completion_type {
             CompletionType::Custom(s) => self
                 .tab_completers
@@ -250,7 +250,7 @@ impl<T> CommandDispatcher<T> {
     pub fn register_tab_completion(
         &mut self,
         completion_type: &str,
-        completer: impl Fn(&str, &mut T) -> TabCompletion + 'static,
+        completer: impl Fn(&str, &mut T) -> TabCompletion<Text> + 'static,
     ) {
         self.tab_completers
             .insert(completion_type.to_owned(), Box::new(completer));
@@ -262,7 +262,7 @@ impl<T> CommandDispatcher<T> {
     ) -> (
         Slab<CommandNode>,
         Slab<Box<dyn Fn(&mut Args, T) -> CommandOutput>>,
-        HashMap<String, Completer<T>>,
+        HashMap<String, Completer<T, Text>>,
         Slab<Box<Fork<T>>>,
     ) {
         (self.nodes, self.executors, self.tab_completers, self.forks)
@@ -373,7 +373,7 @@ impl<T> CommandDispatcher<T> {
         command: &str,
         context: &mut T,
         node: usize,
-    ) -> Option<TabCompletion> {
+    ) -> Option<TabCompletion<Text>> {
         self.nodes
             .get(node)?
             .find_suggestions(command, context, self)
