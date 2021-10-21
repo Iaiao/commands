@@ -2311,7 +2311,7 @@ impl Message {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SwizzleArgument;
 
 impl ArgumentParser for SwizzleArgument {
@@ -2360,7 +2360,7 @@ impl ArgumentParser for SwizzleArgument {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Swizzle {
     pub x: bool,
     pub y: bool,
