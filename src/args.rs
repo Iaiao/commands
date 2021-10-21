@@ -40,7 +40,7 @@ pub trait Combine<T: HList> {
 }
 
 pub trait Func<Ctx, Args> {
-    fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, Ctx) -> CommandOutput + 'static>;
+    fn to_fn(self) -> Box<dyn Fn(&mut crate::dispatcher::Args, Ctx) -> CommandOutput + 'static>;
 }
 
 impl<T: HList> Combine<T> for () {
@@ -83,7 +83,7 @@ impl<C, F: 'static> Func<C, ()> for F
 where
     F: Fn(C) -> CommandOutput,
 {
-    fn to_fn(self) -> Box<dyn Fn(Args, C) -> CommandOutput + 'static> {
+    fn to_fn(self) -> Box<dyn Fn(&mut Args, C) -> CommandOutput + 'static> {
         Box::new(move |_no_args, ctx| self(ctx))
     }
 }
@@ -125,24 +125,24 @@ macro_rules! generics {
 
         impl<F: 'static, C, $type: 'static> Func<C, product_type!($type)> for F
         where
-            F: Fn(C, $type) -> CommandOutput,
+            F: Fn(C, &mut $type) -> CommandOutput,
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
+            fn to_fn(self) -> Box<dyn Fn(&mut crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     self(context,
-                        *args.into_iter().next().unwrap().downcast().expect("Couldn't cast an argument"))
+                        args.into_iter().next().unwrap().downcast_mut().expect("Couldn't cast an argument"))
                 })
             }
         }
 
         impl<F: 'static, C, $type: 'static> Func<C, ($type,)> for F
         where
-            F: Fn(C, $type) -> CommandOutput,
+            F: Fn(C, &mut $type) -> CommandOutput,
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
+            fn to_fn(self) -> Box<dyn Fn(&mut crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     self(context,
-                        *args.into_iter().next().unwrap().downcast().expect("Couldn't cast an argument"))
+                        args.into_iter().next().unwrap().downcast_mut().expect("Couldn't cast an argument"))
                 })
             }
         }
@@ -175,15 +175,15 @@ macro_rules! generics {
 
         impl<F: 'static, C, $type1: 'static, $( $type: 'static ),*> Func<C, product_type!($type1, $($type),*)> for F
         where
-            F: Fn(C, $type1, $( $type ),*) -> CommandOutput
+            F: Fn(C, &mut $type1, $( &mut $type ),*) -> CommandOutput
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
+            fn to_fn(self) -> Box<dyn Fn(&mut crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     let mut args = args.into_iter();
                     self(context,
-                        *args.next().unwrap().downcast().expect("Couldn't cast an argument"),
+                        args.next().unwrap().downcast_mut().expect("Couldn't cast an argument"),
                         $(
-                            *args.next().unwrap().downcast::<$type>().expect("Couldn't cast an argument")
+                            args.next().unwrap().downcast_mut::<$type>().expect("Couldn't cast an argument")
                         ),*)
                 })
             }
@@ -191,15 +191,15 @@ macro_rules! generics {
 
         impl<F: 'static, C, $type1: 'static, $( $type: 'static ),*> Func<C, ($type1, $($type),*)> for F
         where
-            F: Fn(C, $type1, $( $type ),*) -> CommandOutput,
+            F: Fn(C, &mut $type1, $( &mut $type ),*) -> CommandOutput,
         {
-            fn to_fn(self) -> Box<dyn Fn(crate::dispatcher::Args, C) -> CommandOutput> {
+            fn to_fn(self) -> Box<dyn Fn(&mut crate::dispatcher::Args, C) -> CommandOutput> {
                 Box::new(move |args, context| {
                     let mut args = args.into_iter();
                     self(context,
-                        *args.next().unwrap().downcast().expect("Couldn't cast an argument"),
+                        args.next().unwrap().downcast_mut().expect("Couldn't cast an argument"),
                         $(
-                            *args.next().unwrap().downcast::<$type>().expect("Couldn't cast an argument")
+                            args.next().unwrap().downcast_mut::<$type>().expect("Couldn't cast an argument")
                         ),*)
                 })
             }

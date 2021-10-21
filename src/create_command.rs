@@ -43,10 +43,9 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
     pub fn fork(
         self,
         f: impl FnMut(
-                Args,
+                &mut Args,
                 T,
-                Option<usize>,
-                Box<&mut dyn FnMut(Args, T) -> CommandOutput>,
+                Box<&mut dyn FnMut(&mut Args, T) -> CommandOutput>,
             ) -> CommandOutput
             + 'static,
     ) -> Self {

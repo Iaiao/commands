@@ -5,13 +5,7 @@ use crate::dispatcher::{Args, CommandDispatcher, CommandOutput, TabCompletion};
 use crate::parser::Argument;
 use crate::varint::write_varint;
 
-pub type Fork<T> = dyn for<'a> FnMut(
-    Args,
-    T,
-    Option<usize>,
-    Box<&'a mut dyn FnMut(Args, T) -> CommandOutput>,
-) -> CommandOutput;
-
+#[derive(Debug)]
 #[repr(C)]
 pub enum CommandNode {
     Root {
@@ -35,66 +29,6 @@ pub enum CommandNode {
         redirect: Option<usize>,
         fork: Option<usize>,
     },
-}
-
-impl Debug for CommandNode {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CommandNode::Root { children } => {
-                f.debug_struct("Root").field("children", children).finish()
-            }
-            CommandNode::Literal {
-                execute,
-                name,
-                children,
-                parent,
-                redirect,
-                fork,
-            } => f
-                .debug_struct("Literal")
-                .field("execute", execute)
-                .field("name", name)
-                .field("children", children)
-                .field("parent", parent)
-                .field("redirect", redirect)
-                .field(
-                    "forks",
-                    &if fork.is_some() {
-                        "yes".to_string()
-                    } else {
-                        "no".to_string()
-                    },
-                )
-                .finish(),
-            CommandNode::Argument {
-                execute,
-                name,
-                suggestions_type,
-                parser,
-                children,
-                parent,
-                redirect,
-                fork,
-            } => f
-                .debug_struct("Argument")
-                .field("execute", execute)
-                .field("name", name)
-                .field("suggestions_type", suggestions_type)
-                .field("parser", parser)
-                .field("children", children)
-                .field("parent", parent)
-                .field("redirect", redirect)
-                .field(
-                    "forks",
-                    &&if fork.is_some() {
-                        "yes".to_string()
-                    } else {
-                        "no".to_string()
-                    },
-                )
-                .finish(),
-        }
-    }
 }
 
 #[allow(clippy::derivable_impls)]
