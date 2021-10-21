@@ -1,7 +1,7 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::io::Write;
 
-use crate::dispatcher::{Args, CommandDispatcher, CommandOutput, TabCompletion};
+use crate::dispatcher::{CommandDispatcher, TabCompletion};
 use crate::parser::Argument;
 use crate::varint::write_varint;
 

@@ -42,11 +42,7 @@ impl<'a, T, A: 'a + Tuple> CreateCommand<'a, T, A> {
     /// Execute multiple commands with different contexts
     pub fn fork(
         self,
-        f: impl FnMut(
-                &mut Args,
-                T,
-                Box<&mut dyn FnMut(&mut Args, T) -> CommandOutput>,
-            ) -> CommandOutput
+        f: impl FnMut(&mut Args, T, Box<&mut dyn FnMut(&mut Args, T) -> CommandOutput>) -> CommandOutput
             + 'static,
     ) -> Self {
         match self.dispatcher.nodes.get_mut(self.current_node).unwrap() {

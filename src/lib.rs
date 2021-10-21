@@ -35,8 +35,8 @@ mod tests {
             .create_command("test")
             .unwrap()
             .argument("arg", DoubleArgument::default(), "none")
-            .executes(|_context, num| {
-                if num == 1.2 {
+            .executes(|_context, num: &mut f64| {
+                if *num == 1.2 {
                     Ok(0)
                 } else {
                     Err(anyhow::anyhow!("Not 1.2"))
@@ -56,8 +56,8 @@ mod tests {
             .unwrap()
             .with(|cmd| {
                 cmd.argument("arg", DoubleArgument::default(), "none")
-                    .executes(|_context, num| {
-                        if num == 1.2 {
+                    .executes(|_context, num: &mut f64| {
+                        if *num == 1.2 {
                             Ok(0)
                         } else {
                             Err(anyhow::anyhow!("Not 1.2"))
@@ -221,9 +221,9 @@ mod tests {
                     .subcommand("as")
                     .argument("entity", EntityArgument::ENTITIES, "none")
                     .redirect(execute)
-                    .fork(|_args, ctx, _arg_i, mut f| {
+                    .fork(|_args, ctx, mut f| {
                         for _ in 0..5 {
-                            f(vec![], ctx).unwrap();
+                            f(&mut vec![], ctx).unwrap();
                         }
                         Ok(1)
                     });

@@ -2310,3 +2310,57 @@ impl Message {
         s
     }
 }
+
+pub struct SwizzleArgument;
+
+impl ArgumentParser for SwizzleArgument {
+    type Output = Swizzle;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
+        let mut x = false;
+        let mut y = false;
+        let mut z = false;
+        for char in input.chars() {
+            match char {
+                'x' => {
+                    if !x {
+                        x = true;
+                    } else {
+                        return None;
+                    }
+                }
+                'y' => {
+                    if !y {
+                        y = true;
+                    } else {
+                        return None;
+                    }
+                }
+                'z' => {
+                    if !z {
+                        z = true;
+                    } else {
+                        return None;
+                    }
+                }
+                ' ' => break,
+                _ => return None,
+            }
+        }
+        Some((x as usize + y as usize + z as usize, Swizzle { x, y, z }))
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:swizzle"
+    }
+}
+
+pub struct Swizzle {
+    pub x: bool,
+    pub y: bool,
+    pub z: bool,
+}
