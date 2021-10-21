@@ -2366,3 +2366,38 @@ pub struct Swizzle {
     pub y: bool,
     pub z: bool,
 }
+
+#[derive(Debug, Clone)]
+pub struct EntityAnchorArgument;
+
+impl ArgumentParser for EntityAnchorArgument {
+    type Output = EntityAnchor;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
+        match input.split(' ').next().unwrap() {
+            "feet" => Some(("feet".len(), EntityAnchor::Feet)),
+            "eyes" => Some(("eyes".len(), EntityAnchor::Eyes)),
+            _ => None,
+        }
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:entity_anchor"
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum EntityAnchor {
+    Feet,
+    Eyes,
+}
+
+impl Default for EntityAnchor {
+    fn default() -> Self {
+        EntityAnchor::Eyes
+    }
+}
