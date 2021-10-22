@@ -3,6 +3,7 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
 use std::marker::PhantomData;
+use std::mem::MaybeUninit;
 use std::ops::{Bound, RangeBounds, RangeFrom, RangeFull, RangeInclusive, RangeToInclusive};
 use std::str::FromStr;
 
@@ -171,28 +172,7 @@ impl ArgumentParser for StringArgument {
                 .or_else(|| Some(input.len()))
                 .map(|i| (i, input[..i].to_string())),
             StringProperties::QuotablePhrase => {
-                if input.starts_with('"') {
-                    if let (Some(i), _) =
-                        input
-                            .chars()
-                            .enumerate()
-                            .fold((None, None), |(found, prev), (i, char)| {
-                                if found.is_some() {
-                                    (found, prev)
-                                } else if char == '"' && (prev.is_some() && prev.unwrap() != '\\') {
-                                    (Some(i), None)
-                                } else {
-                                    (None, Some(char))
-                                }
-                            })
-                    {
-                        return Some((i + 1, input[1..i].to_string()));
-                    }
-                    None
-                } else {
-                    // behave like SingleWord
-                    input.find(' ').map(|i| (i, input[..i].to_string()))
-                }
+                Self::find_quoted_phrase_or_read_until(input, &[' '])
             }
             StringProperties::GreedyPhrase => {
                 let i = if input.ends_with(' ') {
@@ -211,6 +191,38 @@ impl ArgumentParser for StringArgument {
 
     fn get_identifier(&self) -> &'static str {
         "brigadier:string"
+    }
+}
+
+impl StringArgument {
+    pub fn find_quoted_phrase_or_read_until(
+        input: &str,
+        chars: &[char],
+    ) -> Option<(usize, String)> {
+        if input.starts_with('"') {
+            if let (Some(i), _) =
+                input
+                    .chars()
+                    .enumerate()
+                    .fold((None, None), |(found, prev), (i, char)| {
+                        if found.is_some() {
+                            (found, prev)
+                        } else if char == '"' && (prev.is_some() && prev.unwrap() != '\\') {
+                            (Some(i), None)
+                        } else {
+                            (None, Some(char))
+                        }
+                    })
+            {
+                Some((i + 1, input[1..i].to_string()))
+            } else {
+                None
+            }
+        } else {
+            // behave like SingleWord
+            let s = input.split(chars).next().unwrap();
+            Some((s.len(), s.to_string()))
+        }
     }
 }
 
@@ -746,7 +758,7 @@ impl<'de> Deserialize<'de> for BoolPredicate<Tag> {
             b = false;
             d.next_char().unwrap();
         }
-        let (chars, tag) = quartz_nbt::snbt::parse_and_size(d.input)
+        let (tag, chars) = quartz_nbt::snbt::parse_and_size(d.input)
             .map_err(|e| D::Error::custom(e.to_string()))?;
         d.input = &d.input[chars..];
         Ok(BoolPredicate(b, Tag(tag)))
@@ -2137,7 +2149,7 @@ impl ArgumentParser for ItemPredicateArgument {
         if let Some(brace) = input.find('{') {
             if brace < space {
                 item = &input[..brace];
-                let (len, t) = quartz_nbt::snbt::parse_and_size(&input[brace..]).ok()?;
+                let (t, len) = quartz_nbt::snbt::parse_and_size(&input[brace..]).ok()?;
                 tag_len = len;
                 tag = Some(t);
             } else {
@@ -2181,7 +2193,7 @@ pub enum ItemPredicateType {
     Item(ResourceLocation),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResourceLocation(String, String);
 
 impl ResourceLocation {
@@ -2195,6 +2207,11 @@ impl ResourceLocation {
 
     pub fn value(&self) -> &str {
         &self.1
+    }
+
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.0.len() + 1 + self.1.len()
     }
 }
 
@@ -2214,6 +2231,10 @@ impl FromStr for ResourceLocation {
                     $var
                 }
             }
+        }
+
+        if value.is_empty() {
+            bail!("The string cannot be empty")
         }
 
         let s = value.split(':').collect::<Vec<_>>();
@@ -2399,7 +2420,7 @@ pub enum EntityAnchor {
 
 impl Default for EntityAnchor {
     fn default() -> Self {
-        EntityAnchor::Eyes
+        EntityAnchor::Feet
     }
 }
 
@@ -2414,7 +2435,7 @@ impl ArgumentParser for TimeArgument {
         let mut suffix = None;
         for char in input.chars() {
             match char {
-                c @ ('0'..='9' | '.') => s.push(c),
+                c @ ('0'..='9' | '.' | '-') => s.push(c),
                 c @ ('d' | 's' | 't') => {
                     if suffix.is_some() {
                         return None;
@@ -2467,5 +2488,231 @@ impl TryFrom<char> for TimeUnit {
 impl Default for TimeUnit {
     fn default() -> Self {
         TimeUnit::Ticks
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockPosArgument;
+
+impl ArgumentParser for BlockPosArgument {
+    type Output = BlockPos;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
+        let mut now = 0;
+        let mut relative_now = false;
+        let mut local = false;
+        let mut s = String::new();
+        let mut pos = MaybeUninit::uninit();
+        let mut i = 0;
+        for char in input.chars() {
+            match char {
+                '^' => {
+                    if now == 0 && s.is_empty() {
+                        local = true;
+                    } else if !local || !s.is_empty() {
+                        return None;
+                    }
+                }
+                '~' => {
+                    if !s.is_empty() {
+                        return None;
+                    }
+                    relative_now = true;
+                    if local {
+                        return None;
+                    }
+                }
+                c @ ('0'..='9' | '-') => {
+                    if s.is_empty() && local {
+                        return None;
+                    }
+                    s.push(c);
+                }
+                '.' => {
+                    if !local {
+                        return None;
+                    }
+                    s.push('.');
+                }
+                ' ' => {
+                    if now == 0 {
+                        // X
+                        if local {
+                            pos.write(BlockPos::Local(
+                                if s.is_empty() { 0.0 } else { s.parse().ok()? },
+                                0.0,
+                                0.0,
+                            ));
+                        } else {
+                            pos.write(BlockPos::Relative {
+                                x: (relative_now, if s.is_empty() { 0 } else { s.parse().ok()? }),
+                                y: (false, 0),
+                                z: (false, 0),
+                            });
+                        }
+                    } else if now == 1 {
+                        // Y
+                        // SAFETY: `now` can is set to 1 only after passing previous block, where `pos` is initialized
+                        match unsafe { pos.assume_init_mut() } {
+                            BlockPos::Local(_, y, _) => {
+                                *y = if s.is_empty() { 0.0 } else { s.parse().ok()? }
+                            }
+                            BlockPos::Relative { y, .. } => {
+                                *y = (relative_now, if s.is_empty() { 0 } else { s.parse().ok()? })
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                    now += 1;
+                    s = String::new();
+                    relative_now = false;
+                }
+                _ => return None,
+            }
+            i += 1;
+        }
+        if now != 2 {
+            return None;
+        }
+        // Z
+        // SAFETY: `pos` is initialized when increasing `now` from 0 to 1
+        unsafe {
+            match pos.assume_init_mut() {
+                BlockPos::Local(_, _, z) => *z = if s.is_empty() { 0.0 } else { s.parse().ok()? },
+                BlockPos::Relative { z, .. } => {
+                    *z = (relative_now, if s.is_empty() { 0 } else { s.parse().ok()? })
+                }
+            }
+            Some((i, pos.assume_init()))
+        }
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:block_pos"
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum BlockPos {
+    /// Relative position (~1, ~-1, 1). If not prefixed with ~, the first bool is set false
+    Relative {
+        x: (bool, i32),
+        y: (bool, i32),
+        z: (bool, i32),
+    },
+    Local(f64, f64, f64),
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockStateArgument;
+
+impl ArgumentParser for BlockStateArgument {
+    type Output = BlockState;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
+        let res_loc = input.split(&[' ', '[', '{'][..]).next().unwrap();
+        let has_namespace = res_loc.contains(':');
+        let block: ResourceLocation = res_loc.parse().ok()?;
+        let block_len = if has_namespace {
+            block.len()
+        } else {
+            block.len() - "minecraft:".len()
+        };
+
+        let (properties_len, properties) = if input.len() > block_len
+            && input.chars().nth(block_len).unwrap() == '['
+        {
+            let props = input[block_len..].split(']').next().unwrap();
+            let mut s = props;
+            let mut properties = HashMap::new();
+            loop {
+                s = s[1..].trim_start_matches(' ');
+                let (len, key) = StringArgument::find_quoted_phrase_or_read_until(s, &['=', ' '])?;
+
+                s = s[len..].trim_start_matches(' ');
+                if !s.starts_with('=') {
+                    return None;
+                }
+
+                s = s[1..].trim_start_matches(' ');
+                let (len, value) =
+                    StringArgument::find_quoted_phrase_or_read_until(s, &[',', ' '])?;
+
+                s = s[len..].trim_start_matches(' ');
+                properties.insert(key, value);
+
+                match s.chars().next() {
+                    None => break,
+                    Some(',') => continue,
+                    _ => return None,
+                }
+            }
+            (props.len() + 1, properties)
+        } else {
+            (0, HashMap::default())
+        };
+
+        let (nbt, nbt_len) = if input.len() > block_len + properties_len
+            && input.chars().nth(block_len + properties_len).unwrap() == '{'
+        {
+            quartz_nbt::snbt::parse_and_size(&input[block_len + properties_len..]).ok()?
+        } else {
+            (NbtCompound::new(), 0)
+        };
+
+        Some((
+            block_len + properties_len + nbt_len,
+            BlockState {
+                block,
+                properties,
+                nbt,
+            },
+        ))
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:block_state"
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockState {
+    pub block: ResourceLocation,
+    pub properties: HashMap<String, String>,
+    pub nbt: NbtCompound,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResourceLocationArgument;
+
+impl ArgumentParser for ResourceLocationArgument {
+    type Output = ResourceLocation;
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
+        let value = input.split(' ').next().unwrap();
+        let has_namespace = value.contains(':');
+        let value: ResourceLocation = value.parse().ok()?;
+        if has_namespace {
+            Some((value.len(), value))
+        } else {
+            Some((value.len() - "minecraft:".len(), value))
+        }
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:resource_location"
     }
 }

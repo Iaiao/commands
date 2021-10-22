@@ -11,4 +11,4 @@ anyhow = "1.0.44"
 log = "0.4.14"
 serde = { version = "1.0.130", features = [ "derive" ] }
 uuid = "0.8.2"
-quartz_nbt = { git = "https://github.com/Iaiao/quartz_nbt", branch = "parse_and_size", features = [ "serde" ] }
+quartz_nbt = { git = "https://github.com/Rusty-Quartz/quartz_nbt", features = [ "serde" ] }
