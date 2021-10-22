@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
 use std::marker::PhantomData;
@@ -2399,5 +2400,68 @@ pub enum EntityAnchor {
 impl Default for EntityAnchor {
     fn default() -> Self {
         EntityAnchor::Eyes
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TimeArgument;
+
+impl ArgumentParser for TimeArgument {
+    type Output = (TimeUnit, f32);
+
+    fn parse(&self, input: &str) -> Option<(usize, Self::Output)> {
+        let mut s = String::new();
+        let mut suffix = None;
+        for char in input.chars() {
+            match char {
+                c @ ('0'..='9' | '.') => s.push(c),
+                c @ ('d' | 's' | 't') => {
+                    if suffix.is_some() {
+                        return None;
+                    } else {
+                        suffix = Some(c.try_into().ok()?)
+                    }
+                }
+                _ => return None,
+            }
+        }
+        Some((s.len(), (suffix.unwrap_or_default(), s.parse().ok()?)))
+    }
+
+    fn get_properties(&self) -> &dyn ParserProperties {
+        &()
+    }
+
+    fn get_identifier(&self) -> &'static str {
+        "minecraft:time"
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum TimeUnit {
+    Days,
+    Seconds,
+    Ticks,
+}
+
+impl TryFrom<char> for TimeUnit {
+    type Error = String;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'd' => Ok(TimeUnit::Days),
+            's' => Ok(TimeUnit::Seconds),
+            't' => Ok(TimeUnit::Ticks),
+            c => Err(format!(
+                "Invalid time unit `{}`. Expected: `d`, `s` or `t`",
+                c
+            )),
+        }
+    }
+}
+
+impl Default for TimeUnit {
+    fn default() -> Self {
+        TimeUnit::Ticks
     }
 }
