@@ -10,9 +10,12 @@ use crate::varint::write_varint;
 
 pub type Args = Vec<Box<dyn Any>>;
 pub type Completer<T, Text> = Box<dyn Fn(&str, &mut T) -> TabCompletion<Text>>;
-// (replacement start, replacement end, Vec<(replacement, Option<tooltip>)>)
+/// (replacement start, replacement end, Vec<(replacement, Option<tooltip>)>)
 pub type TabCompletion<Text> = (usize, usize, Vec<(String, Option<Text>)>);
 pub type CommandOutput = anyhow::Result<i32>;
+/// Can modify command context or run the command multiple times.
+/// If running the command multiple times, returning CommandOutput doesn't matter
+/// because it'll always return Ok(number of successful executions)
 pub type Fork<T> = dyn for<'a> FnMut(
     &mut Args,
     T,
@@ -20,7 +23,7 @@ pub type Fork<T> = dyn for<'a> FnMut(
 ) -> CommandOutput;
 
 pub struct CommandDispatcher<T, Text> {
-    // 0 is always root node
+    /// Node list. 0 is always root node
     pub(crate) nodes: Slab<CommandNode>,
     pub(crate) executors: Slab<Box<dyn Fn(&mut Args, T) -> CommandOutput>>,
     pub(crate) tab_completers: HashMap<String, Completer<T, Text>>,

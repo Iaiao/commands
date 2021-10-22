@@ -67,16 +67,14 @@ impl<'a, T, Text, A: 'a + Tuple> CreateCommand<'a, T, Text, A> {
     }
 
     pub fn subcommand(self, name: &str) -> Self {
-        let i = self
-            .dispatcher
-            .insert_child(CommandNode::Literal {
-                execute: None,
-                name: name.to_owned(),
-                children: vec![],
-                parent: self.current_node,
-                redirect: None,
-                fork: None,
-            });
+        let i = self.dispatcher.insert_child(CommandNode::Literal {
+            execute: None,
+            name: name.to_owned(),
+            children: vec![],
+            parent: self.current_node,
+            redirect: None,
+            fork: None,
+        });
         CreateCommand::new(i, self.dispatcher)
     }
 
@@ -92,18 +90,16 @@ impl<'a, T, Text, A: 'a + Tuple> CreateCommand<'a, T, Text, A> {
     where
         <A as Tuple>::HList: Combine<Product<Parser::Output, ()>>,
     {
-        let i = self
-            .dispatcher
-            .insert_child(CommandNode::Argument {
-                execute: None,
-                name: name.to_owned(),
-                suggestions_type: completion_type.into(),
-                parser: Box::new(parser),
-                children: vec![],
-                parent: self.current_node,
-                redirect: None,
-                fork: None,
-            });
+        let i = self.dispatcher.insert_child(CommandNode::Argument {
+            execute: None,
+            name: name.to_owned(),
+            suggestions_type: completion_type.into(),
+            parser: Box::new(parser),
+            children: vec![],
+            parent: self.current_node,
+            redirect: None,
+            fork: None,
+        });
         CreateCommand::new(i, self.dispatcher)
     }
 
