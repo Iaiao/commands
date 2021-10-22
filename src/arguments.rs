@@ -2422,10 +2422,14 @@ impl ArgumentParser for TimeArgument {
                         suffix = Some(c.try_into().ok()?)
                     }
                 }
+                ' ' => break,
                 _ => return None,
             }
         }
-        Some((s.len(), (suffix.unwrap_or_default(), s.parse().ok()?)))
+        Some((
+            s.len() + suffix.is_some() as usize,
+            (suffix.unwrap_or_default(), s.parse().ok()?),
+        ))
     }
 
     fn get_properties(&self) -> &dyn ParserProperties {
