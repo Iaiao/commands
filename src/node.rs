@@ -366,11 +366,20 @@ impl CompletionType {
     }
 }
 
-impl<T> From<T> for CompletionType
-where
-    T: Into<String>,
-{
-    fn from(s: T) -> Self {
+impl From<&str> for CompletionType {
+    fn from(s: &str) -> Self {
         CompletionType::custom(s)
+    }
+}
+
+impl From<Option<String>> for CompletionType {
+    fn from(s: Option<String>) -> Self {
+        CompletionType::custom(s.unwrap_or_else(|| "none".to_string()))
+    }
+}
+
+impl Default for CompletionType {
+    fn default() -> Self {
+        None.into()
     }
 }

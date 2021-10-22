@@ -34,7 +34,7 @@ mod tests {
         dispatcher
             .create_command("test")
             .unwrap()
-            .argument("arg", DoubleArgument::default(), "none")
+            .argument("arg", DoubleArgument::default(), None)
             .executes(|_context, num: &mut f64| {
                 if *num == 1.2 {
                     Ok(0)
@@ -55,7 +55,7 @@ mod tests {
             .create_command("test")
             .unwrap()
             .with(|cmd| {
-                cmd.argument("arg", DoubleArgument::default(), "none")
+                cmd.argument("arg", DoubleArgument::default(), None)
                     .executes(|_context, num: &mut f64| {
                         if *num == 1.2 {
                             Ok(0)
@@ -84,7 +84,7 @@ mod tests {
             .create_command("test")
             .unwrap()
             .with(|cmd| {
-                cmd.argument("arg", DoubleArgument::default(), "none");
+                cmd.argument("arg", DoubleArgument::default(), None);
             })
             .with(|cmd| {
                 cmd.subcommand("subcommand").executes(|_context| Ok(0));
@@ -198,7 +198,7 @@ mod tests {
         dispatcher.create_command("testspaces").unwrap().argument(
             "s",
             StringArgument::GREEDY_PHRASE,
-            "none",
+            None,
         );
 
         assert_eq!(dispatcher.tab_complete(r#"testspaces a "#, ()), None);
@@ -219,7 +219,7 @@ mod tests {
             .with(|command| {
                 command
                     .subcommand("as")
-                    .argument("entity", EntityArgument::ENTITIES, "none")
+                    .argument("entity", EntityArgument::ENTITIES, None)
                     .redirect(execute)
                     .fork(|_args, ctx, mut f| {
                         for _ in 0..5 {
