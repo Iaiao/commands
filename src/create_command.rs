@@ -76,8 +76,7 @@ impl<'a, T, Text, A: 'a + Tuple> CreateCommand<'a, T, Text, A> {
                 parent: self.current_node,
                 redirect: None,
                 fork: None,
-            })
-            .unwrap();
+            });
         CreateCommand::new(i, self.dispatcher)
     }
 
@@ -104,8 +103,7 @@ impl<'a, T, Text, A: 'a + Tuple> CreateCommand<'a, T, Text, A> {
                 parent: self.current_node,
                 redirect: None,
                 fork: None,
-            })
-            .unwrap();
+            });
         CreateCommand::new(i, self.dispatcher)
     }
 

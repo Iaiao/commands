@@ -2,7 +2,6 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
-use anyhow::{anyhow, bail};
 use slab::Slab;
 
 use crate::create_command::CreateCommand;
@@ -80,9 +79,9 @@ impl<T, Text> CommandDispatcher<T, Text> {
             .find_suggestions(prompt, &mut context, self)
     }
 
-    pub fn create_command(&mut self, name: &str) -> anyhow::Result<CreateCommand<T, Text, ()>> {
+    pub fn create_command(&mut self, name: &str) -> CreateCommand<T, Text, ()> {
         if name.is_empty() {
-            bail!("Command name is empty")
+            panic!("Command name is empty")
         } else {
             let names = name.split(' ');
             let mut node = 0;
@@ -94,9 +93,9 @@ impl<T, Text> CommandDispatcher<T, Text> {
                     parent: node,
                     redirect: None,
                     fork: None,
-                })?;
+                });
             }
-            Ok(CreateCommand::new(node, self))
+            CreateCommand::new(node, self)
         }
     }
 
@@ -351,7 +350,7 @@ impl<T, Text> CommandDispatcher<T, Text> {
         self.forks.get_mut(fork)
     }
 
-    pub(crate) fn insert_child(&mut self, child: CommandNode) -> anyhow::Result<usize> {
+    pub(crate) fn insert_child(&mut self, child: CommandNode) -> usize {
         let parent = child.parent().unwrap();
         let i = self.nodes.insert(child);
         let parent = self
@@ -359,9 +358,9 @@ impl<T, Text> CommandDispatcher<T, Text> {
             .iter_mut()
             .find(|(i, _)| *i == parent)
             .map(|(_, node)| node)
-            .ok_or_else(|| anyhow!("Couldn't find child node"))?;
+            .unwrap_or_else(|| panic!("Couldn't find parent node"));
         parent.add_child(i);
-        Ok(i)
+        i
     }
 
     pub fn matches(&self, command: &str, node: usize) -> Option<Vec<usize>> {

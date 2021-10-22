@@ -17,7 +17,6 @@ mod tests {
         let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test 1")
-            .unwrap()
             .executes(|_context| Ok(0));
 
         let result = dispatcher.find_command("test 1");
@@ -33,7 +32,6 @@ mod tests {
         let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test")
-            .unwrap()
             .argument("arg", DoubleArgument::default(), None)
             .executes(|_context, num: &mut f64| {
                 if *num == 1.2 {
@@ -53,7 +51,6 @@ mod tests {
         let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test")
-            .unwrap()
             .with(|cmd| {
                 cmd.argument("arg", DoubleArgument::default(), None)
                     .executes(|_context, num: &mut f64| {
@@ -82,7 +79,6 @@ mod tests {
         let mut dispatcher = CommandDispatcher::<(), ()>::new();
         dispatcher
             .create_command("test")
-            .unwrap()
             .with(|cmd| {
                 cmd.argument("arg", DoubleArgument::default(), None);
             })
@@ -128,13 +124,11 @@ mod tests {
         }
 
         let dispatcher = &mut CommandDispatcher::<(), String>::new();
-        dispatcher.create_command("test").unwrap();
-        dispatcher.create_command("test2").unwrap().argument(
-            "gamemode",
-            GamemodeArgument,
-            "gamemode",
-        );
-        dispatcher.create_command("3test2").unwrap();
+        dispatcher.create_command("test");
+        dispatcher
+            .create_command("test2")
+            .argument("gamemode", GamemodeArgument, "gamemode");
+        dispatcher.create_command("3test2");
 
         assert_eq!(
             dispatcher.tab_complete(r#"te"#, ()),
@@ -195,11 +189,9 @@ mod tests {
             ))
         );
 
-        dispatcher.create_command("testspaces").unwrap().argument(
-            "s",
-            StringArgument::GREEDY_PHRASE,
-            None,
-        );
+        dispatcher
+            .create_command("testspaces")
+            .argument("s", StringArgument::GREEDY_PHRASE, None);
 
         assert_eq!(dispatcher.tab_complete(r#"testspaces a "#, ()), None);
         assert_eq!(dispatcher.tab_complete(r#"testspaces a b"#, ()), None);
@@ -209,11 +201,8 @@ mod tests {
     fn test_redirect_and_fork() {
         let mut dispatcher = CommandDispatcher::<(), ()>::new();
         let root = 0;
-        dispatcher
-            .create_command("test")
-            .unwrap()
-            .executes(|_| Ok(1));
-        let command = dispatcher.create_command("execute").unwrap();
+        dispatcher.create_command("test").executes(|_| Ok(1));
+        let command = dispatcher.create_command("execute");
         let execute = command.current_node_id();
         command
             .with(|command| {
