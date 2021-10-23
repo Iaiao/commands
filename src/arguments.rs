@@ -2627,7 +2627,7 @@ impl ArgumentParser for BlockStateArgument {
         let (properties_len, properties) = if input.len() > block_len
             && input.chars().nth(block_len).unwrap() == '['
         {
-            let props = input[block_len..].split(']').next().unwrap();
+            let props = &input[block_len..];
             let mut s = props;
             let mut properties = HashMap::new();
             loop {
@@ -2641,18 +2641,18 @@ impl ArgumentParser for BlockStateArgument {
 
                 s = s[1..].trim_start_matches(' ');
                 let (len, value) =
-                    StringArgument::find_quoted_phrase_or_read_until(s, &[',', ' '])?;
+                    StringArgument::find_quoted_phrase_or_read_until(s, &[',', ' ', ']'])?;
 
                 s = s[len..].trim_start_matches(' ');
                 properties.insert(key, value);
 
                 match s.chars().next() {
-                    None => break,
                     Some(',') => continue,
+                    Some(']') => break,
                     _ => return None,
                 }
             }
-            (props.len() + 1, properties)
+            (props.len() - s.len() + 1, properties)
         } else {
             (0, HashMap::default())
         };
