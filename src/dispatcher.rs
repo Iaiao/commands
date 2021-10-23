@@ -213,7 +213,7 @@ impl<T, Text> CommandDispatcher<T, Text> {
                     }
                 }
 
-                if successful_forks == 1 {
+                if successful_forks <= 1 {
                     res
                 } else {
                     Ok(successful_forks)
